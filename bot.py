@@ -49,7 +49,7 @@ ALL_COUNTRIES = [
     ("VIETNAM", "vietnam")
 ]
 
-# --- CRYPTO EXCHANGES (Single Column List) ---
+# --- CRYPTO EXCHANGES (Single Column List) for General Wallet Top-Up Only ---
 CRYPTO_EXCHANGES = [
     ("Binance", "binance"),
     ("Bybit", "bybit"),
@@ -61,6 +61,14 @@ CRYPTO_EXCHANGES = [
     ("Kucoin", "kucoin"),
     ("Mexc", "mexc"),
     ("Bitfinex", "bitfinex")
+]
+
+# --- PAYMENT WALLETS (BTC, ETH, USDT, LTC) ---
+PAYMENT_WALLETS = [
+    ("BTC", "btc"),
+    ("ETH", "eth"),
+    ("USDT", "usdt"),
+    ("LTC", "ltc")
 ]
 
 # --- STANDARD LEADS PRICING TIERS (SMS, Crypto) ---
@@ -95,7 +103,7 @@ BANK_PRICING_TIERS = [
     ("100k — £3,000", "100k_3000")
 ]
 
-# --- NEW EMAIL LEADS PRICING TIERS ---
+# --- EMAIL LEADS PRICING TIERS ---
 EMAIL_PRICING_TIERS = [
     ("1K — £40", "1k_40"),
     ("5K — £250", "5k_250"),
@@ -241,6 +249,12 @@ def crypto_exchanges_keyboard(back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
+# --- CLEAN PAYMENT WALLETS KEYBOARD (BTC, ETH, USDT, LTC + Back) ---
+def payment_wallets_keyboard(back_target):
+    keyboard = [[InlineKeyboardButton(name, callback_data=f"wallet_pay_{code}")] for name, code in PAYMENT_WALLETS]
+    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
+    return InlineKeyboardMarkup(keyboard)
+
 # --- HANDLERS ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -272,14 +286,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = "Please select a country:"
             await query.message.edit_text(text, reply_markup=countries_keyboard("bank_country", "main_menu"))
         elif cat_type == "email":
-            # New Email Leads Flow: Step 1 -> Show full country list
             text = "Please select a country:"
             await query.message.edit_text(text, reply_markup=countries_keyboard("email_country", "main_menu"))
+        elif cat_type == "crypto":
+            text = "Please select the amount of leads you want to purchase:"
+            await query.message.edit_text(text, reply_markup=pricing_tiers_keyboard("main_menu"))
         else:
             text = "Please select the amount of leads you want to purchase:"
             await query.message.edit_text(text, reply_markup=pricing_tiers_keyboard("main_menu"))
 
-    # --- NEW EMAIL LEADS FLOW HANDLERS ---
+    # --- EMAIL LEADS FLOW ---
     elif data.startswith("email_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_email_country'] = country_code
@@ -299,14 +315,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tier_code = data.split("_")[1]
         context.user_data['selected_email_tier'] = tier_code
 
-        text = (
-            "Current Balance: £0\n"
-            "Please select a crypto option:"
-        )
+        text = "Please select a payment wallet option:"
         cat_code = context.user_data.get('selected_email_category', 'business')
-        await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard(f"email_cat_{cat_code}"))
+        await query.message.edit_text(text, reply_markup=payment_wallets_keyboard(f"email_cat_{cat_code}"))
 
-    # --- STANDARD LEADS FLOW ---
+    # --- CRYPTO LEADS FLOW ---
     elif data.startswith("price_"):
         tier_code = data.split("_")[1]
         context.user_data['selected_tier'] = tier_code
@@ -320,11 +333,17 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['selected_country'] = country_code
         tier = context.user_data.get('selected_tier', 'package')
         
-        text = (
-            "Current Balance: £0\n"
-            "Please select a crypto option:"
-        )
-        await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard(f"price_{tier}"))
+        text = "Please select a payment wallet option:"
+        await query.message.edit_text(text, reply_markup=payment_wallets_keyboard(f"price_{tier}"))
+
+    # --- SMS LEADS FLOW ---
+    elif data.startswith("sms_country_"):
+        country_code = data.split("_")[2]
+        context.user_data['selected_sms_country'] = country_code
+        tier = context.user_data.get('selected_tier', 'package')
+        
+        text = "Please select a payment wallet option:"
+        await query.message.edit_text(text, reply_markup=payment_wallets_keyboard(f"price_{tier}"))
 
     # --- BANK LEADS FLOW ---
     elif data.startswith("bank_country_"):
@@ -346,26 +365,23 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tier_code = data.split("_")[1]
         context.user_data['selected_bank_tier'] = tier_code
         
-        text = (
-            "Current Balance: £0\n"
-            "Please select a crypto option:"
-        )
+        text = "Please select a payment wallet option:"
         bank_name = context.user_data.get('selected_bank_name', 'bank')
-        await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard(f"bank_name_{bank_name}"))
+        await query.message.edit_text(text, reply_markup=payment_wallets_keyboard(f"bank_name_{bank_name}"))
 
-    # --- CHECKOUT / PAYMENT CONFIRMATION ---
-    elif data.startswith("crypto_ex_"):
-        exchange_code = data.split("_")[2]
-        context.user_data['selected_exchange'] = exchange_code
+    # --- CHECKOUT / PAYMENT CONFIRMATION FOR PAYMENT WALLETS (BTC, ETH, USDT, LTC) ---
+    elif data.startswith("wallet_pay_"):
+        wallet_code = data.split("_")[2]
+        context.user_data['selected_payment_wallet'] = wallet_code
         
+        wallet_name = wallet_code.upper()
         category = context.user_data.get('selected_category', 'leads')
-        exchange = exchange_code.capitalize()
 
         if category == "bank":
             country = context.user_data.get('selected_bank_country', 'global')
             bank = context.user_data.get('selected_bank_name', 'bank')
             tier = context.user_data.get('selected_bank_tier', 'package')
-            back_target = f"bank_name_{bank}"
+            back_target = f"bank_price_{tier}"
 
             text = (
                 f"Order Summary\n\n"
@@ -373,34 +389,34 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Country: {country.upper()}\n"
                 f"Bank Institution: {bank.upper()}\n"
                 f"Package Tier: {tier.upper()} Leads\n"
-                f"Payment Method: {exchange}\n\n"
+                f"Payment Wallet: {wallet_name}\n\n"
                 f"Status: Ready for checkout. Please contact administration to complete payment."
             )
         elif category == "email":
-            country = context.user_data.get('selected_email_category', 'global')
+            country = context.user_data.get('selected_email_country', 'global')
             email_cat = context.user_data.get('selected_email_category', 'category')
             tier = context.user_data.get('selected_email_tier', 'package')
-            back_target = f"email_cat_{email_cat}"
+            back_target = f"email_price_{tier}"
 
             text = (
                 f"Order Summary\n\n"
                 f"Category: EMAIL LEADS ({email_cat.upper()})\n"
                 f"Country: {country.upper()}\n"
                 f"Package Tier: {tier.upper()} Leads\n"
-                f"Payment Method: {exchange}\n\n"
+                f"Payment Wallet: {wallet_name}\n\n"
                 f"Status: Ready for checkout. Please contact administration to complete payment."
             )
         else:
             tier = context.user_data.get('selected_tier', 'package')
             country = context.user_data.get('selected_country', 'global')
-            back_target = f"lead_country_{country}"
+            back_target = f"price_{tier}"
 
             text = (
                 f"Order Summary\n\n"
                 f"Category: {category.upper()} LEADS\n"
                 f"Package: {tier.upper()} Leads\n"
                 f"Country: {country.upper()}\n"
-                f"Payment Method: {exchange}\n\n"
+                f"Payment Wallet: {wallet_name}\n\n"
                 f"Status: Ready for checkout. Please contact administration to complete payment."
             )
 
@@ -410,13 +426,30 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # --- WALLET & TOP UP FLOW ---
+    # --- WALLET & TOP UP FLOW (Using general crypto exchanges list) ---
     elif data == "wallet":
         text = (
             "Current Balance: £0\n\n"
             "Please select a crypto option to top up your balance:"
         )
         await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard("main_menu"))
+
+    elif data.startswith("crypto_ex_"):
+        exchange_code = data.split("_")[2]
+        context.user_data['selected_exchange'] = exchange_code
+        exchange = exchange_code.capitalize()
+
+        text = (
+            f"Top Up Summary\n\n"
+            f"Method: {exchange}\n"
+            f"Current Balance: £0\n\n"
+            f"Status: Ready for top up. Please contact administration to complete payment."
+        )
+        keyboard = [
+            [InlineKeyboardButton("Back", callback_data="wallet")],
+            [InlineKeyboardButton("Main Menu", callback_data="main_menu")]
+        ]
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
 
     # --- FAQ SECTION ---
     elif data == "faq":
