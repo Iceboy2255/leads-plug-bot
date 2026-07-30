@@ -292,14 +292,14 @@ def wallet_page_keyboard(back_target):
 
 def topup_keyboard(back_target):
     keyboard = [
-        [InlineKeyboardButton("🔶 £50 🔶", callback_data="topup_50"), InlineKeyboardButton("🔶 £100 🔶", callback_data="topup_100")],
-        [InlineKeyboardButton("🔶 £150 🔶", callback_data="topup_150"), InlineKeyboardButton("🔶 £200 🔶", callback_data="topup_200")],
-        [InlineKeyboardButton("🔶 £250 🔶", callback_data="topup_250"), InlineKeyboardButton("🔶 £300 🔶", callback_data="topup_300")],
-        [InlineKeyboardButton("🔶 £350 🔶", callback_data="topup_350"), InlineKeyboardButton("🔶 £400 🔶", callback_data="topup_400")],
-        [InlineKeyboardButton("🔶 £450 🔶", callback_data="topup_450"), InlineKeyboardButton("🔶 £500 🔶", callback_data="topup_500")],
-        [InlineKeyboardButton("🔶 £750 🔶", callback_data="topup_750"), InlineKeyboardButton("🔶 £1000 🔶", callback_data="topup_1000")],
-        [InlineKeyboardButton("💰 Custom Amount", callback_data="topup_custom")],
-        [InlineKeyboardButton("🔙 Back", callback_data=back_target)]
+        [InlineKeyboardButton("£50", callback_data="topup_50"), InlineKeyboardButton("£100", callback_data="topup_100")],
+        [InlineKeyboardButton("£150", callback_data="topup_150"), InlineKeyboardButton("£200", callback_data="topup_200")],
+        [InlineKeyboardButton("£250", callback_data="topup_250"), InlineKeyboardButton("£300", callback_data="topup_300")],
+        [InlineKeyboardButton("£350", callback_data="topup_350"), InlineKeyboardButton("£400", callback_data="topup_400")],
+        [InlineKeyboardButton("£450", callback_data="topup_450"), InlineKeyboardButton("£500", callback_data="topup_500")],
+        [InlineKeyboardButton("£750", callback_data="topup_750"), InlineKeyboardButton("£1000", callback_data="topup_1000")],
+        [InlineKeyboardButton("Custom Amount", callback_data="topup_custom")],
+        [InlineKeyboardButton("Back", callback_data=back_target)]
     ]
     return InlineKeyboardMarkup(keyboard)
 
