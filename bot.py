@@ -7,6 +7,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
+from datetime import datetime
 
 # Enable logging
 logging.basicConfig(
@@ -16,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 # Load Token from Environment Variable
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+# In-memory storage for user join dates (or use a database in production)
+USER_JOIN_DATES = {}
 
 # --- COMPREHENSIVE COUNTRY LIST (Two-Column Grid Layout) ---
 ALL_COUNTRIES = [
@@ -280,8 +284,8 @@ def crypto_exchanges_keyboard(back_target):
 
 def wallet_page_keyboard(back_target):
     keyboard = [
-        [InlineKeyboardButton("💎 BTC", callback_data="pay_btc"), InlineKeyboardButton("💎 ETH", callback_data="pay_eth")],
-        [InlineKeyboardButton("💎 USDT", callback_data="pay_usdt"), InlineKeyboardButton("💎 LTC", callback_data="pay_ltc")],
+        [InlineKeyboardButton("BTC", callback_data="pay_btc"), InlineKeyboardButton("ETH", callback_data="pay_eth")],
+        [InlineKeyboardButton("USDT", callback_data="pay_usdt"), InlineKeyboardButton("LTC", callback_data="pay_ltc")],
         [InlineKeyboardButton("Back", callback_data=back_target)]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -302,6 +306,10 @@ def topup_keyboard(back_target):
 # --- HANDLERS ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user and user.id not in USER_JOIN_DATES:
+        USER_JOIN_DATES[user.id] = datetime.now().strftime("%m-%d-%Y")
+
     welcome_text = (
         "Welcome to LeadsPlug.\n\n"
         "Please select an option from the menu below:"
@@ -317,6 +325,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+
+    user = update.effective_user
+    if user and user.id not in USER_JOIN_DATES:
+        USER_JOIN_DATES[user.id] = datetime.now().strftime("%m-%d-%Y")
 
     if data == "main_menu":
         await start(update, context)
@@ -464,15 +476,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --- WALLET & TOP UP FLOW ---
     elif data == "wallet":
         user_id = query.from_user.id
-        join_date = "07-29-2026"  # Placeholder or fetched from context/db if available
+        join_date = USER_JOIN_DATES.get(user_id, datetime.now().strftime("%m-%d-%Y"))
         text = (
-            f"==============================\n"
-            f"🪙 ID: {user_id}\n"
+            "==================================\n"
+            f"🪪 ID: {user_id}\n"
             f"💰 Balance: £0.00\n"
-            f"📅 Join Date: {join_date}\n"
-            f"==============================\n\n"
-            f"Select a top-up amount below:\n"
-            f"<i>Minimum top-up: £50</i>"
+            f"🗓 Join Date: {join_date}\n"
+            "==================================\n\n"
+            "Select a top-up amount below:\n"
+            "<i>Minimum top-up: £50</i>"
         )
         await query.message.edit_text(text, reply_markup=topup_keyboard("main_menu"), parse_mode="HTML")
 
@@ -494,12 +506,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         coin = data.split("_")[1].upper()
         wallet_addr = WALLET_ADDRESSES.get(coin.lower(), "N/A")
         text = (
-            f"==============================\n"
-            f"💎 **{coin} Payment Wallet**\n"
-            f"==============================\n\n"
-            f"Send the required amount to the address below:\n\n"
+            "==============================\n"
+            f"**{coin} Payment Wallet**\n"
+            "==============================\n\n"
+            "Send the required amount to the address below:\n\n"
             f"`{wallet_addr}`\n\n"
-            f"<i>Minimum deposit: £50</i>"
+            "<i>Minimum deposit: £50</i>"
         )
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"), parse_mode="HTML")
 
