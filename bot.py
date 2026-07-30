@@ -279,7 +279,24 @@ def crypto_exchanges_keyboard(back_target):
     return InlineKeyboardMarkup(keyboard)
 
 def wallet_page_keyboard(back_target):
-    keyboard = [[InlineKeyboardButton("Back", callback_data=back_target)]]
+    keyboard = [
+        [InlineKeyboardButton("💎 BTC", callback_data="pay_btc"), InlineKeyboardButton("💎 ETH", callback_data="pay_eth")],
+        [InlineKeyboardButton("💎 USDT", callback_data="pay_usdt"), InlineKeyboardButton("💎 LTC", callback_data="pay_ltc")],
+        [InlineKeyboardButton("Back", callback_data=back_target)]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def topup_keyboard(back_target):
+    keyboard = [
+        [InlineKeyboardButton("🔶 £50 🔶", callback_data="topup_50"), InlineKeyboardButton("🔶 £100 🔶", callback_data="topup_100")],
+        [InlineKeyboardButton("🔶 £150 🔶", callback_data="topup_150"), InlineKeyboardButton("🔶 £200 🔶", callback_data="topup_200")],
+        [InlineKeyboardButton("🔶 £250 🔶", callback_data="topup_250"), InlineKeyboardButton("🔶 £300 🔶", callback_data="topup_300")],
+        [InlineKeyboardButton("🔶 £350 🔶", callback_data="topup_350"), InlineKeyboardButton("🔶 £400 🔶", callback_data="topup_400")],
+        [InlineKeyboardButton("🔶 £450 🔶", callback_data="topup_450"), InlineKeyboardButton("🔶 £500 🔶", callback_data="topup_500")],
+        [InlineKeyboardButton("🔶 £750 🔶", callback_data="topup_750"), InlineKeyboardButton("🔶 £1000 🔶", callback_data="topup_1000")],
+        [InlineKeyboardButton("💰 Custom Amount", callback_data="topup_custom")],
+        [InlineKeyboardButton("🔙 Back", callback_data=back_target)]
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 # --- HANDLERS ---
@@ -316,8 +333,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = "Please select a country:"
             await query.message.edit_text(text, reply_markup=countries_keyboard("email_country", "main_menu"))
         elif cat_type == "crypto":
-            text = "Please select the amount of leads you want to purchase:"
-            await query.message.edit_text(text, reply_markup=pricing_tiers_keyboard("main_menu"))
+            text = "Please select a crypto exchange:"
+            await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard("main_menu"))
         elif cat_type == "sms":
             text = "Please select a country:"
             await query.message.edit_text(text, reply_markup=countries_keyboard("sms_country", "main_menu"))
@@ -349,31 +366,44 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         back_target = f"email_cat_{cat_code}"
 
         text = (
-            "BTC\n"
-            "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a\n\n"
-            "ETH\n"
-            "0x44ceA102871A7270785585909a4eBe13A157D614\n\n"
-            "USDT\n"
-            "TVYa8uBeMZem8MwePaVii5PjEydrK3e8it\n\n"
-            "LTC\n"
-            "LgHLihB2f48nh13F7Byu8yiEAVRhuBMEXL"
+            "==============================\n"
+            "💳 **Select Payment Wallet**\n"
+            "==============================\n\n"
+            "Please choose your preferred cryptocurrency to complete the payment.\n\n"
+            "<i>Minimum deposit: £50</i>"
         )
-        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target))
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
-    # --- CRYPTO LEADS FLOW (Leads -> Country -> Crypto Exchanges List) ---
+    # --- CRYPTO LEADS FLOW (Exchange -> Country -> Price -> Wallet) ---
+    elif data.startswith("crypto_ex_"):
+        exchange_code = data.split("_")[2]
+        context.user_data['selected_exchange'] = exchange_code
+
+        text = "Please select a country:"
+        await query.message.edit_text(text, reply_markup=countries_keyboard("crypto_country", "category_crypto"))
+
+    elif data.startswith("crypto_country_"):
+        country_code = data.split("_")[2]
+        context.user_data['selected_crypto_country'] = country_code
+
+        text = "Please select the amount of leads you want to purchase:"
+        await query.message.edit_text(text, reply_markup=pricing_tiers_keyboard(f"crypto_ex_{context.user_data.get('selected_exchange', 'binance')}"))
+
     elif data.startswith("price_"):
         tier_code = data.split("_")[1]
         context.user_data['selected_tier'] = tier_code
-        
-        text = "Please select a country:"
-        await query.message.edit_text(text, reply_markup=countries_keyboard("lead_country", "category_crypto"))
 
-    elif data.startswith("lead_country_"):
-        country_code = data.split("_")[2]
-        context.user_data['selected_country'] = country_code
-        
-        text = "Please select a crypto exchange:"
-        await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard(f"price_{context.user_data.get('selected_tier', '1k_200')}"))
+        country = context.user_data.get('selected_crypto_country', 'uk')
+        back_target = f"crypto_country_{country}"
+
+        text = (
+            "==============================\n"
+            "💳 **Select Payment Wallet**\n"
+            "==============================\n\n"
+            "Please choose your preferred cryptocurrency to complete the payment.\n\n"
+            "<i>Minimum deposit: £50</i>"
+        )
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
     # --- AGED SMS LEADS FLOW ---
     elif data.startswith("sms_country_"):
@@ -391,16 +421,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         back_target = f"sms_country_{country}"
 
         text = (
-            "BTC\n"
-            "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a\n\n"
-            "ETH\n"
-            "0x44ceA102871A7270785585909a4eBe13A157D614\n\n"
-            "USDT\n"
-            "TVYa8uBeMZem8MwePaVii5PjEydrK3e8it\n\n"
-            "LTC\n"
-            "LgHLihB2f48nh13F7Byu8yiEAVRhuBMEXL"
+            "==============================\n"
+            "💳 **Select Payment Wallet**\n"
+            "==============================\n\n"
+            "Please choose your preferred cryptocurrency to complete the payment.\n\n"
+            "<i>Minimum deposit: £50</i>"
         )
-        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target))
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
     # --- BANK LEADS FLOW ---
     elif data.startswith("bank_country_"):
@@ -426,55 +453,55 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         back_target = f"bank_name_{bank_name}"
 
         text = (
-            "BTC\n"
-            "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a\n\n"
-            "ETH\n"
-            "0x44ceA102871A7270785585909a4eBe13A157D614\n\n"
-            "USDT\n"
-            "TVYa8uBeMZem8MwePaVii5PjEydrK3e8it\n\n"
-            "LTC\n"
-            "LgHLihB2f48nh13F7Byu8yiEAVRhuBMEXL"
+            "==============================\n"
+            "💳 **Select Payment Wallet**\n"
+            "==============================\n\n"
+            "Please choose your preferred cryptocurrency to complete the payment.\n\n"
+            "<i>Minimum deposit: £50</i>"
         )
-        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target))
-
-    # --- CHECKOUT FOR CRYPTO EXCHANGES (Crypto Leads Final Step) ---
-    elif data.startswith("crypto_ex_"):
-        exchange_code = data.split("_")[2]
-        context.user_data['selected_exchange'] = exchange_code
-        
-        exchange = exchange_code.capitalize()
-        tier = context.user_data.get('selected_tier', 'package')
-        country = context.user_data.get('selected_country', 'global')
-        back_target = f"lead_country_{country}"
-
-        text = (
-            f"Order Summary\n\n"
-            f"Category: CRYPTO LEADS\n"
-            f"Package: {tier.upper()} Leads\n"
-            f"Country: {country.upper()}\n"
-            f"Payment Method: {exchange}\n\n"
-            f"Status: Ready for checkout. Please contact administration to complete payment."
-        )
-
-        keyboard = [
-            [InlineKeyboardButton("Back", callback_data=back_target)],
-            [InlineKeyboardButton("Main Menu", callback_data="main_menu")]
-        ]
-        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
     # --- WALLET & TOP UP FLOW ---
     elif data == "wallet":
+        user_id = query.from_user.id
+        join_date = "07-29-2026"  # Placeholder or fetched from context/db if available
         text = (
-            "BTC\n"
-            "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a\n\n"
-            "ETH\n"
-            "0x44ceA102871A7270785585909a4eBe13A157D614\n\n"
-            "USDT\n"
-            "TVYa8uBeMZem8MwePaVii5PjEydrK3e8it\n\n"
-            "LTC\n"
-            "LgHLihB2f48nh13F7Byu8yiEAVRhuBMEXL"
+            f"==============================\n"
+            f"🪙 ID: {user_id}\n"
+            f"💰 Balance: £0.00\n"
+            f"📅 Join Date: {join_date}\n"
+            f"==============================\n\n"
+            f"Select a top-up amount below:\n"
+            f"<i>Minimum top-up: £50</i>"
         )
-        await query.message.edit_text(text, reply_markup=wallet_page_keyboard("main_menu"))
+        await query.message.edit_text(text, reply_markup=topup_keyboard("main_menu"), parse_mode="HTML")
+
+    elif data.startswith("topup_"):
+        amount = data.split("_")[1]
+        if amount == "custom":
+            text = "Please enter your custom top-up amount:"
+            await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"))
+        else:
+            wallet_addr = WALLET_ADDRESSES.get("btc", "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a")
+            text = (
+                f"Top-up Amount: £{amount}\n\n"
+                f"BTC Wallet Address:\n`{wallet_addr}`\n\n"
+                f"<i>Minimum top-up: £50</i>"
+            )
+            await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"), parse_mode="HTML")
+
+    elif data.startswith("pay_"):
+        coin = data.split("_")[1].upper()
+        wallet_addr = WALLET_ADDRESSES.get(coin.lower(), "N/A")
+        text = (
+            f"==============================\n"
+            f"💎 **{coin} Payment Wallet**\n"
+            f"==============================\n\n"
+            f"Send the required amount to the address below:\n\n"
+            f"`{wallet_addr}`\n\n"
+            f"<i>Minimum deposit: £50</i>"
+        )
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"), parse_mode="HTML")
 
     # --- FAQ SECTION ---
     elif data == "faq":
