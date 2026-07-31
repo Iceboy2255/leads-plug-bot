@@ -67,6 +67,28 @@ CRYPTO_EXCHANGES = [
     ("Bitfinex", "bitfinex")
 ]
 
+# --- LEDGER DEVICES (HARDWARE WALLETS) ---
+LEDGER_DEVICES = [
+    ("Blockstream Jade", "blockstream_jade"),
+    ("SafePal S1", "safepal_s1"),
+    ("SafePal X1", "safepal_x1"),
+    ("Tangem Card", "tangem_card"),
+    ("Tangem Ring", "tangem_ring"),
+    ("CoolWallet Pro", "coolwallet_pro"),
+    ("CoolWallet S", "coolwallet_s"),
+    ("OneKey Classic", "onekey_classic"),
+    ("Ledger Flex", "ledger_flex"),
+    ("Ledger Stax", "ledger_stax"),
+    ("Trezor Model One", "trezor_model_one"),
+    ("Trezor Safe 3", "trezor_safe_3"),
+    ("Trezor Safe 5", "trezor_safe_5"),
+    ("ELLIPAL Titan 2.0", "ellipal_titan_2_0"),
+    ("ELLIPAL Titan Mini", "ellipal_titan_mini"),
+    ("Keystone 3 Pro", "keystone_3_pro"),
+    ("Ledger Nano S Plus", "ledger_nano_s_plus"),
+    ("Ledger Nano X", "ledger_nano_x")
+]
+
 # --- PAYMENT WALLETS WITH EXACT ADDRESSES ---
 PAYMENT_WALLETS = [
     ("BTC", "btc", "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a"),
@@ -88,6 +110,19 @@ PRICING_TIERS = [
     ("15k - £2100", "15k_2100"),
     ("20k - £2600", "20k_2600"),
     ("25k - £3000", "25k_3000")
+]
+
+# --- LEDGER / HARDWARE WALLET LEADS PRICING TIERS (+£250 APPLIED) ---
+LEDGER_PRICING_TIERS = [
+    ("1k - £450", "1k_450"),
+    ("2k - £630", "2k_630"),
+    ("3k - £790", "3k_790"),
+    ("4k - £930", "4k_930"),
+    ("5k - £1050", "5k_1050"),
+    ("10k - £1750", "10k_1750"),
+    ("15k - £2350", "15k_2350"),
+    ("20k - £2850", "20k_2850"),
+    ("25k - £3250", "25k_3250")
 ]
 
 # --- AGED SMS LEADS PRICING TIERS (FEMALE) ---
@@ -410,8 +445,30 @@ def main_menu_keyboard():
     ]
     return InlineKeyboardMarkup(keyboard)
 
+def crypto_leads_home_keyboard(back_target):
+    keyboard = [
+        [
+            InlineKeyboardButton("Crypto Exchange Leads", callback_data="crypto_sub_exchange"),
+            InlineKeyboardButton("Ledger Device Leads", callback_data="crypto_sub_ledger")
+        ],
+        [
+            InlineKeyboardButton("Back", callback_data=back_target)
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
 def pricing_tiers_keyboard(back_target):
     keyboard = [[InlineKeyboardButton(label, callback_data=f"price_{val}")] for label, val in PRICING_TIERS]
+    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
+    return InlineKeyboardMarkup(keyboard)
+
+def ledger_pricing_tiers_keyboard(back_target):
+    keyboard = [[InlineKeyboardButton(label, callback_data=f"ledger_price_{val}")] for label, val in LEDGER_PRICING_TIERS]
+    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
+    return InlineKeyboardMarkup(keyboard)
+
+def ledger_devices_keyboard(back_target):
+    keyboard = [[InlineKeyboardButton(name, callback_data=f"ledger_dev_{code}")] for name, code in LEDGER_DEVICES]
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
@@ -532,14 +589,23 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = "Please select a country:"
             await query.message.edit_text(text, reply_markup=countries_keyboard("email_country", "main_menu"))
         elif cat_type == "crypto":
-            text = "Please select a crypto exchange:"
-            await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard("main_menu"))
+            text = "Please select an option:"
+            await query.message.edit_text(text, reply_markup=crypto_leads_home_keyboard("main_menu"))
         elif cat_type == "sms":
             text = "Please select a country:"
             await query.message.edit_text(text, reply_markup=countries_keyboard("sms_country", "main_menu"))
         else:
             text = "Please select an option:"
             await query.message.edit_text(text, reply_markup=main_menu_keyboard())
+
+    # --- CRYPTO LEADS SUB-MENU FLOW ---
+    elif data == "crypto_sub_exchange":
+        text = "Please select a crypto exchange:"
+        await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard("category_crypto"))
+
+    elif data == "crypto_sub_ledger":
+        text = "Please select a hardware wallet device:"
+        await query.message.edit_text(text, reply_markup=ledger_devices_keyboard("category_crypto"))
 
     # --- EMAIL LEADS FLOW ---
     elif data.startswith("email_country_"):
@@ -573,13 +639,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
-    # --- CRYPTO LEADS FLOW (Exchange -> Country -> Price -> Wallet) ---
+    # --- CRYPTO EXCHANGE LEADS FLOW ---
     elif data.startswith("crypto_ex_"):
         exchange_code = data.split("_")[2]
         context.user_data['selected_exchange'] = exchange_code
 
         text = "Please select a country:"
-        await query.message.edit_text(text, reply_markup=countries_keyboard("crypto_country", "category_crypto"))
+        await query.message.edit_text(text, reply_markup=countries_keyboard("crypto_country", "crypto_sub_exchange"))
 
     elif data.startswith("crypto_country_"):
         country_code = data.split("_")[2]
@@ -594,6 +660,29 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         country = context.user_data.get('selected_crypto_country', 'uk')
         back_target = f"crypto_country_{country}"
+
+        text = (
+            "==============================\n"
+            "💳 **Select Payment Wallet**\n"
+            "==============================\n\n"
+            "Please choose your preferred cryptocurrency to complete the payment.\n\n"
+            "<i>Minimum deposit: £50</i>"
+        )
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
+
+    # --- LEDGER DEVICE LEADS FLOW ---
+    elif data.startswith("ledger_dev_"):
+        dev_code = data.split("_")[2]
+        context.user_data['selected_ledger_device'] = dev_code
+
+        text = "Please select the amount of leads you want to purchase:"
+        await query.message.edit_text(text, reply_markup=ledger_pricing_tiers_keyboard("crypto_sub_ledger"))
+
+    elif data.startswith("ledger_price_"):
+        tier_code = data.split("_")[1]
+        context.user_data['selected_ledger_tier'] = tier_code
+
+        back_target = "crypto_sub_ledger"
 
         text = (
             "==============================\n"
