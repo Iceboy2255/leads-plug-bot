@@ -156,64 +156,216 @@ EMAIL_CATEGORIES = [
     ("Social Media", "social_media")
 ]
 
-# --- MAJOR BANKS MAPPING FOR ALL COUNTRIES ---
+# --- UPDATED BANK LEADS MAPPING FOR ALL COUNTRIES ---
 COUNTRY_BANKS = {
-    "australia": [("Commonwealth Bank", "commbank"), ("Westpac", "westpac"), ("ANZ", "anz"), ("NAB", "nab"), ("Macquarie Bank", "macquarie")],
-    "austria": [("Erste Bank", "erste"), ("Raiffeisen Bank", "raiffeisen"), ("UniCredit Bank Austria", "unicredit_austria"), ("BAWAG P.S.K.", "bawag")],
-    "belgium": [("KBC Bank", "kbc"), ("Belfius", "belfius"), ("BNP Paribas Fortis", "bnp_fortis"), ("ING Belgium", "ing_belgium")],
-    "brazil": [("Itaú Unibanco", "itau"), ("Banco Bradesco", "bradesco"), ("Banco do Brasil", "banco_do_brasil"), ("Santander Brasil", "santander_brasil"), ("Nubank", "nubank")],
-    "canada": [("RBC", "rbc"), ("TD Canada Trust", "td"), ("Scotiabank", "scotiabank"), ("BMO", "bmo"), ("CIBC", "cibc")],
-    "cayman_island": [("Butterfield Bank", "butterfield"), ("CIBC FirstCaribbean", "cibc_fc"), ("RBTT Bank", "rbtt"), ("NCB Cayman", "ncb_cayman")],
-    "chile": [("Banco de Chile", "banco_de_chile"), ("Banco Santander Chile", "santander_chile"), ("BCI", "bci"), ("Banco Estado", "banco_estado")],
-    "colombia": [("Bancolombia", "bancolombia"), ("Banco de Bogotá", "banco_bogota"), ("Davivienda", "davivienda"), ("BBVA Colombia", "bbva_colombia")],
-    "croatia": [("Zagrebačka banka", "zaba"), ("Privredna banka Zagreb", "pbz"), ("Erste & Steiermärkische Bank", "erste_croatia"), ("OTP banka", "otp_croatia")],
-    "curaco": [("MCB Bank", "mcb"), ("Vidanova Bank", "vidanova"), ("Banco di Caribe", "banco_di_caribe"), ("RBC Royal Bank", "rbc_curacao")],
-    "cyprus": [("Bank of Cyprus", "bank_of_cyprus"), ("Hellenic Bank", "hellenic"), ("Alpha Bank Cyprus", "alpha_cyprus"), ("Eurobank Cyprus", "eurobank_cyprus")],
-    "czech_republic": [("Česká spořitelna", "ceska"), ("ČSOB", "csob"), ("Komerční banka", "komercni"), ("Moneta Money Bank", "moneta")],
-    "denmark": [("Danske Bank", "danske"), ("Jyske Bank", "jyske"), ("Sydbank", "sydbank"), ("Nykredit", "nykredit")],
-    "dominican_republic": [("Banco BHD", "bhd"), ("Banco Popular Dominicano", "popular"), ("Banreservas", "banreservas"), ("Banco León", "leon")],
-    "ecuador": [("Banco Pichincha", "pichincha"), ("Banco Guayaquil", "guayaquil"), ("Produbanco", "produbanco"), ("Banco Internacional", "internacional_ec")],
-    "estonia": [("Swedbank Estonia", "swedbank_ee"), ("SEB Pank", "seb_ee"), ("LHV Pank", "lhv"), ("Luminor", "luminor_ee")],
-    "finland": [("Nordea", "nordea_fi"), ("OP Financial Group", "op_group"), ("Danske Bank Finland", "danske_fi"), ("S-Pankki", "s_pankki")],
-    "france": [("BNP Paribas", "bnp"), ("Credit Agricole", "credit_agricole"), ("Societe Generale", "socgen"), ("BPCE", "bpce"), ("La Banque Postale", "la_banque_postale")],
-    "germany": [("Deutsche Bank", "deutsche"), ("Commerzbank", "commerzbank"), ("Sparkasse", "sparkasse"), ("N26", "n26"), ("DZ Bank", "dz_bank")],
-    "greece": [("National Bank of Greece", "nbg"), ("Piraeus Bank", "piraeus"), ("Alpha Bank", "alpha_gr"), ("Eurobank", "eurobank_gr")],
-    "hong_kong": [("HSBC Hong Kong", "hsbc_hk"), ("BOC Hong Kong", "bochk"), ("Hang Seng Bank", "hang_seng"), ("Standard Chartered HK", "sc_hk")],
-    "hungary": [("OTP Bank", "otp_hu"), ("K&H Bank", "k_h"), ("Erste Bank Hungary", "erste_hu"), ("MBH Bank", "mbh")],
-    "iceland": [("Landsbankinn", "landsbankinn"), ("Íslandsbanki", "islandsbanki"), ("Arion Bank", "arion")],
-    "indonesia": [("Bank Mandiri", "mandiri"), ("Bank Rakyat Indonesia (BRI)", "bri"), ("Bank Central Asia (BCA)", "bca"), ("Bank Negara Indonesia (BNI)", "bni")],
-    "ireland": [("AIB", "aib"), ("Bank of Ireland", "boi"), ("Permanent TSB", "ptsb"), ("KBC Ireland", "kbc_ireland")],
-    "israel": [("Bank Hapoalim", "hapoalim"), ("Bank Leumi", "leumi"), ("Israel Discount Bank", "discount"), ("Mizrahi Tefahot", "mizrahi")],
-    "italy": [("Intesa Sanpaolo", "intesa"), ("UniCredit", "unicredit_it"), ("Banco BPM", "banco_bpm"), ("Monte dei Paschi di Siena", "mps")],
-    "latvia": [("Swedbank Latvija", "swedbank_lv"), ("SEB Latvija", "seb_lv"), ("Citadele Bank", "citadele"), ("Luminor Latvia", "luminor_lv")],
-    "lithuania": [("Swedbank Lietuvoje", "swedbank_lt"), ("SEB Lietuvoje", "seb_lt"), ("Šiaulių bankas", "siauliu"), ("Luminor Lithuania", "luminor_lt")],
-    "luxembourg": [("BCEE", "bcee"), ("BIL", "bil"), ("BGL BNP Paribas", "bgl_bnp"), ("Raiffeisen Luxembourg", "raiffeisen_lu")],
-    "macao": [("BOC Macau", "boc_macau"), ("Tai Fung Bank", "tai_fung"), ("Banco Nacional Ultramarino", "bnu"), ("ICBC Macau", "icbc_macau")],
-    "malaysia": [("Maybank", "maybank"), ("CIMB Bank", "cimb"), ("Public Bank Berhad", "public_bank"), ("RHB Bank", "rhb")],
-    "malta": [("Bank of Valletta", "bov"), ("HSBC Bank Malta", "hsbc_malta"), ("APS Bank", "aps"), ("MeDirect", "medirect")],
-    "myanmar": [("KBZ Bank", "kbz"), ("AYA Bank", "aya"), ("CB Bank", "cb_bank"), ("Yoma Bank", "yoma")],
-    "nepal": [("Nabil Bank", "nabil"), ("Global IME Bank", "global_ime"), ("Nepal Investment Mega Bank", "nimb"), ("NIC Asia Bank", "nic_asia")],
-    "netherlands": [("ING Bank", "ing_nl"), ("Rabobank", "rabobank"), ("ABN AMRO", "abn_amro"), ("SNS Bank", "sns")],
-    "new_zealand": [("ANZ New Zealand", "anz_nz"), ("ASB Bank", "asb"), ("BNZ", "bnz"), ("Westpac NZ", "westpac_nz")],
-    "norway": [("DNB", "dnb"), ("Nordea Norge", "nordea_no"), ("Danske Bank Norges", "danske_no"), ("Sbanken", "sbanken")],
-    "philippines": [("BDO Unibank", "bdo"), ("Bank of the Philippine Islands (BPI)", "bpi"), ("Land Bank of the Philippines", "landbank"), ("Metrobank", "metrobank")],
-    "poland": [("PKO Bank Polski", "pko"), ("Bank Pekao", "pekao"), ("Santander Bank Polska", "santander_pl"), ("mBank", "mbank")],
-    "portugal": [("Caixa Geral de Depósitos", "cgd"), ("Millennium bcp", "bcp"), ("Novo Banco", "novo_banco"), ("BPI", "bpi_pt")],
-    "romania": [("Banca Comercială Română (BCR)", "bcr"), ("BRD - Groupe Société Générale", "brd"), ("Banca Transilvania", "banca_transilvania"), ("ING Romania", "ing_ro")],
-    "russia": [("Sberbank", "sberbank"), ("VTB Bank", "vtb"), ("Gazprombank", "gazprombank"), ("Alfa-Bank", "alfa_bank")],
-    "singapore": [("DBS Bank", "dbs"), ("OCBC Bank", "ocbc"), ("UOB", "uob")],
-    "slovakia": [("Slovenská sporiteľňa", "slovenska"), ("VÚB banka", "vub"), ("Tatra banka", "tatra"), ("UniCredit Bank Slovakia", "unicredit_sk")],
-    "slovenia": [("NLB", "nlb"), ("NKBM", "nkbm"), ("SKB banka", "skb"), ("Intesa Sanpaolo Bank Slovenia", "intesa_si")],
-    "south_africa": [("Standard Bank", "standard_bank"), ("FirstRand (FNB)", "fnb"), ("Absa Bank", "absa"), ("Nedbank", "nedbank")],
-    "spain": [("Banco Santander", "santander_es"), ("BBVA", "bbva"), ("CaixaBank", "caixabank"), ("Sabadell", "sabadell")],
-    "sweden": [("Swedbank", "swedbank"), ("SEB", "seb"), ("Handelsbanken", "handelsbanken"), ("Nordea", "nordea_se")],
-    "switzerland": [("UBS", "ubs"), ("Zurich Cantonal Bank", "zkb"), ("Raiffeisen Switzerland", "raiffeisen_ch"), ("PostFinance", "postfinance")],
-    "thailand": [("Bangkok Bank", "bangkok_bank"), ("Kasikornbank (KBank)", "kbank"), ("Siam Commercial Bank (SCB)", "scb"), ("Krungthai Bank", "krungthai")],
-    "uk": [("Barclays", "barclays"), ("HSBC", "hsbc"), ("Lloyds", "lloyds"), ("NatWest", "natwest"), ("Santander", "santander"), ("Halifax", "halifax"), ("Nationwide", "nationwide"), ("Monzo", "monzo"), ("Starling", "starling")],
-    "ukraine": [("PrivatBank", "privatbank"), ("Oschadbank", "oschadbank"), ("Universal Bank (monobank)", "monobank_ua"), ("Raiffeisen Bank Aval", "raiffeisen_ua")],
-    "usa": [("Chase", "chase"), ("Bank of America", "bank_of_america"), ("Wells Fargo", "wells_fargo"), ("Citibank", "citibank"), ("Capital One", "capital_one"), ("US Bank", "us_bank"), ("PNC", "pnc"), ("TD Bank", "td_bank")],
-    "vietnam": [("Vietcombank", "vietcombank"), ("Techcombank", "techcombank"), ("VietinBank", "vietinbank"), ("BIDV", "bidv"), ("VPBank", "vpbank")],
-    "default": [("National Bank", "national_bank"), ("Commercial Bank", "commercial_bank"), ("Retail Bank", "retail_bank"), ("Digital Bank", "digital_bank")]
+    "australia": [
+        ("Commonwealth Bank", "commonwealth_bank"), ("Westpac Bank", "westpac_bank"), ("ANZ Bank", "anz_bank"),
+        ("National Australia Bank", "national_australia_bank"), ("Macquarie Bank", "macquarie_bank"), ("Bendigo Bank", "bendigo_bank"),
+        ("Suncorp Bank", "suncorp_bank"), ("Bank of Queensland", "bank_of_queensland"), ("ING Australia", "ing_australia"),
+        ("HSBC Australia", "hsbc_australia"), ("Citibank Australia", "citibank_australia"), ("AMP Bank", "amp_bank"),
+        ("Bankwest", "bankwest"), ("ME Bank", "me_bank"), ("UBank", "ubank"), ("Virgin Money Australia", "virgin_money_australia"),
+        ("Judo Bank", "judo_bank"), ("Beyond Bank", "beyond_bank"), ("Heritage Bank", "heritage_bank")
+    ],
+    "austria": [
+        ("Erste Bank", "erste_bank"), ("Raiffeisen Bank", "raiffeisen_bank"), ("Bank Austria", "bank_austria"),
+        ("BAWAG Group", "bawag_group"), ("Volksbank Wien", "volksbank_wien"), ("Oberbank", "oberbank"),
+        ("Hypo Tirol Bank", "hypo_tirol_bank"), ("Hypo Vorarlberg Bank", "hypo_vorarlberg_bank"), ("Addiko Bank", "addiko_bank"),
+        ("DenizBank Austria", "denizbank_austria"), ("BKS Bank", "bks_bank"), ("Volkskreditbank", "volkskreditbank")
+    ],
+    "belgium": [
+        ("KBC Bank", "kbc_bank"), ("BNP Paribas Fortis", "bnp_paribas_fortis"), ("ING Belgium", "ing_belgium"),
+        ("Belfius Bank", "belfius_bank"), ("Argenta", "argenta"), ("AXA Bank Belgium", "axa_bank_belgium"),
+        ("Crelan", "crelan"), ("Beobank", "beobank"), ("Europabank", "europabank"), ("Nagelmackers Bank", "nagelmackers_bank"),
+        ("Keytrade Bank", "keytrade_bank"), ("VDK Bank", "vdk_bank")
+    ],
+    "brazil": [
+        ("Banco do Brasil", "banco_do_brasil"), ("Itaú Unibanco", "itau_unibanco"), ("Bradesco Bank", "bradesco_bank"),
+        ("Santander Brasil", "santander_brasil"), ("Caixa Econômica Federal", "caixa_economica_federal"), ("Banco Safra", "banco_safra"),
+        ("BTG Pactual", "btg_pactual"), ("Banco Inter", "banco_inter"), ("Nubank", "nubank"), ("Banco Pan", "banco_pan"),
+        ("Banco Votorantim", "banco_votorantim"), ("Banco Daycoval", "banco_daycoval"), ("Banco Original", "banco_original")
+    ],
+    "canada": [
+        ("Royal Bank of Canada", "royal_bank_of_canada"), ("TD Canada Trust", "td_canada_trust"), ("Scotiabank", "scotiabank"),
+        ("Bank of Montreal", "bank_of_montreal"), ("CIBC", "cibc"), ("National Bank of Canada", "national_bank_of_canada"),
+        ("HSBC Canada", "hsbc_canada"), ("Laurentian Bank", "laurentian_bank"), ("EQ Bank", "eq_bank"), ("Alterna Bank", "alterna_bank"),
+        ("Canadian Western Bank", "canadian_western_bank"), ("Manulife Bank", "manulife_bank"), ("Tangerine Bank", "tangerine_bank"),
+        ("Simplii Financial", "simplii_financial"), ("Motusbank", "motusbank"), ("VersaBank", "versabank"), ("Oaken Financial", "oaken_financial")
+    ],
+    "cayman_island": [
+        ("Cayman National Bank", "cayman_national_bank"), ("Butterfield Bank", "butterfield_bank"), ("Fidelity Bank Cayman", "fidelity_bank_cayman"),
+        ("Scotiabank Cayman", "scotiabank_cayman"), ("RBC Cayman", "rbc_cayman"), ("CIBC FirstCaribbean", "cibc_firstcaribbean"), ("HSBC Cayman", "hsbc_cayman")
+    ],
+    "chile": [
+        ("Banco de Chile", "banco_de_chile"), ("Banco Santander Chile", "banco_santander_chile"), ("Banco Estado", "banco_estado"),
+        ("Banco BCI", "banco_bci"), ("Scotiabank Chile", "scotiabank_chile"), ("Banco Falabella", "banco_falabella"), ("Banco Ripley", "banco_ripley")
+    ],
+    "colombia": [
+        ("Bancolombia", "bancolombia"), ("Banco de Bogotá", "banco_de_bogota"), ("Davivienda", "davivienda"),
+        ("BBVA Colombia", "bbva_colombia"), ("Banco Popular Colombia", "banco_popular_colombia"), ("Scotiabank Colpatria", "scotiabank_colpatria"),
+        ("Banco Agrario", "banco_agrario"), ("Banco Caja Social", "banco_caja_social")
+    ],
+    "croatia": [
+        ("Zagrebacka Banka", "zagrebacka_banka"), ("Privredna Banka Zagreb", "privredna_banka_zagreb"), ("Erste Bank Croatia", "erste_bank_croatia"),
+        ("Raiffeisen Bank Croatia", "raiffeisen_bank_croatia"), ("OTP Bank Croatia", "otp_bank_croatia"), ("Addiko Bank Croatia", "addiko_bank_croatia"),
+        ("Hrvatska Postanska Banka", "hrvatska_postanska_banka")
+    ],
+    "cyprus": [
+        ("Bank of Cyprus", "bank_of_cyprus"), ("Hellenic Bank", "hellenic_bank"), ("Eurobank Cyprus", "eurobank_cyprus"),
+        ("Alpha Bank Cyprus", "alpha_bank_cyprus"), ("AstroBank", "astrobank"), ("Ancoria Bank", "ancoria_bank")
+    ],
+    "czech_republic": [
+        ("Ceska Sporitelna", "ceska_sporitelna"), ("CSOB Bank", "csob_bank"), ("Komercni Banka", "komercni_banka"),
+        ("Moneta Money Bank", "moneta_money_bank"), ("Air Bank", "air_bank"), ("Fio Banka", "fio_banka")
+    ],
+    "denmark": [
+        ("Danske Bank", "danske_bank"), ("Nordea Denmark", "nordea_denmark"), ("Jyske Bank", "jyske_bank"),
+        ("Sydbank", "sydbank"), ("Nykredit Bank", "nykredit_bank"), ("Spar Nord Bank", "spar_nord_bank")
+    ],
+    "dominican_republic": [
+        ("Banco BHD", "bhd"), ("Banco Popular Dominicano", "popular"), ("Banreservas", "banreservas"), ("Banco León", "leon")
+    ],
+    "ecuador": [
+        ("Banco Pichincha", "banco_pichincha"), ("Banco Guayaquil", "banco_guayaquil"), ("Banco del Pacífico", "banco_del_pacifico")
+    ],
+    "estonia": [
+        ("LHV Bank", "lhv_bank"), ("SEB Estonia", "seb_estonia"), ("Swedbank Estonia", "swedbank_estonia")
+    ],
+    "finland": [
+        ("Nordea Finland", "nordea_finland"), ("OP Bank", "op_bank"), ("Danske Bank Finland", "danske_bank_finland")
+    ],
+    "france": [
+        ("BNP Paribas", "bnp_paribas"), ("Société Générale", "societe_generale"), ("Crédit Agricole", "credit_agricole"),
+        ("HSBC France", "hsbc_france"), ("La Banque Postale", "la_banque_postale")
+    ],
+    "germany": [
+        ("Deutsche Bank", "deutsche_bank"), ("Commerzbank", "commerzbank"), ("KfW Bank", "kfw_bank"),
+        ("ING Germany", "ing_germany"), ("DZ Bank", "dz_bank")
+    ],
+    "greece": [
+        ("National Bank of Greece", "nbg"), ("Piraeus Bank", "piraeus"), ("Alpha Bank", "alpha_gr"), ("Eurobank", "eurobank_gr")
+    ],
+    "hong_kong": [
+        ("HSBC Hong Kong", "hsbc_hong_kong"), ("Hang Seng Bank", "hang_seng_bank"), ("Standard Chartered Hong Kong", "standard_chartered_hong_kong"),
+        ("Bank of China Hong Kong", "bank_of_china_hong_kong"), ("DBS Hong Kong", "dbs_hong_kong")
+    ],
+    "hungary": [
+        ("OTP Bank Hungary", "otp_bank_hungary"), ("K&H Bank", "k_h_bank"), ("Erste Bank Hungary", "erste_bank_hungary"), ("UniCredit Hungary", "unicredit_hungary")
+    ],
+    "iceland": [
+        ("Landsbankinn", "landsbankinn"), ("Arion Bank", "arion_bank"), ("Islandsbanki", "islandsbanki")
+    ],
+    "indonesia": [
+        ("Bank Mandiri", "bank_mandiri"), ("Bank Central Asia", "bank_central_asia"), ("Bank Negara Indonesia", "bank_negara_indonesia"),
+        ("Bank Rakyat Indonesia", "bank_rakyat_indonesia"), ("CIMB Niaga", "cimb_niaga")
+    ],
+    "ireland": [
+        ("Bank of Ireland", "bank_of_ireland"), ("Allied Irish Banks", "allied_irish_banks"), ("Permanent TSB", "permanent_tsb"), ("Ulster Bank Ireland", "ulster_bank_ireland")
+    ],
+    "israel": [
+        ("Bank Leumi", "bank_leumi"), ("Bank Hapoalim", "bank_hapoalim"), ("Israel Discount Bank", "israel_discount_bank"), ("Mizrahi Tefahot Bank", "mizrahi_tefahot_bank")
+    ],
+    "italy": [
+        ("UniCredit", "unicredit"), ("Intesa Sanpaolo", "intesa_sanpaolo"), ("Banco BPM", "banco_bpm"),
+        ("Monte dei Paschi di Siena", "monte_dei_paschi_di_siena"), ("BPER Banca", "bper_banca")
+    ],
+    "latvia": [
+        ("Swedbank Latvia", "swedbank_latvia"), ("SEB Latvia", "seb_latvia"), ("Citadele Bank", "citadele_bank")
+    ],
+    "lithuania": [
+        ("Swedbank Lithuania", "swedbank_lithuania"), ("SEB Lithuania", "seb_lithuania"), ("Siauliu Bankas", "siauliu_bankas")
+    ],
+    "luxembourg": [
+        ("Banque Internationale Luxembourg", "banque_internationale_luxembourg"), ("Spuerkeess", "spuerkeess"), ("BGL BNP Paribas", "bgl_bnp_paribas")
+    ],
+    "macao": [
+        ("Banco Nacional Ultramarino", "banco_nacional_ultramarino")
+    ],
+    "malaysia": [
+        ("Maybank", "maybank"), ("CIMB Bank", "cimb_bank"), ("Public Bank", "public_bank"),
+        ("RHB Bank", "rhb_bank"), ("Hong Leong Bank", "hong_leong_bank")
+    ],
+    "malta": [
+        ("Bank of Valletta", "bank_of_valletta"), ("HSBC Malta", "hsbc_malta"), ("APS Bank", "aps_bank")
+    ],
+    "myanmar": [
+        ("KBZ Bank", "kbz_bank"), ("AYA Bank", "aya_bank"), ("CB Bank Myanmar", "cb_bank_myanmar")
+    ],
+    "nepal": [
+        ("NIC Asia Bank", "nic_asia_bank"), ("Global IME Bank", "global_ime_bank"), ("Nabil Bank", "nabil_bank")
+    ],
+    "netherlands": [
+        ("ING Netherlands", "ing_netherlands"), ("ABN AMRO", "abn_amro"), ("Rabobank", "rabobank"), ("De Volksbank", "de_volksbank")
+    ],
+    "new_zealand": [
+        ("ANZ New Zealand", "anz_new_zealand"), ("ASB Bank", "asb_bank"), ("Westpac NZ", "westpac_nz"), ("Kiwibank", "kiwibank")
+    ],
+    "norway": [
+        ("DNB Bank", "dnb_bank"), ("Nordea Norway", "nordea_norway"), ("SpareBank 1", "sparebank_1")
+    ],
+    "philippines": [
+        ("BDO", "bdo"), ("Bank of the Philippine Islands", "bank_of_the_philippine_islands"),
+        ("Metrobank Philippines", "metrobank_philippines"), ("Land Bank Philippines", "land_bank_philippines")
+    ],
+    "poland": [
+        ("PKO Bank Polski", "pko_bank_polski"), ("mBank", "mbank"), ("Santander Poland", "santander_poland")
+    ],
+    "portugal": [
+        ("Banco Santander Totta", "banco_santander_totta"), ("Millennium BCP", "millennium_bcp"), ("Novo Banco", "novo_banco")
+    ],
+    "romania": [
+        ("Banca Transilvania", "banca_transilvania"), ("BRD Bank", "brd_bank"), ("Raiffeisen Bank Romania", "raiffeisen_bank_romania")
+    ],
+    "russia": [
+        ("Sberbank", "sberbank"), ("VTB Bank", "vtb_bank"), ("Gazprombank", "gazprombank"), ("Alfa Bank Russia", "alfa_bank_russia")
+    ],
+    "singapore": [
+        ("DBS Bank", "dbs_bank"), ("OCBC Bank", "ocbc_bank"), ("UOB Bank", "uob_bank")
+    ],
+    "slovakia": [
+        ("Slovenská Sporiteľňa", "slovenska_sporitelna"), ("VUB Bank", "vub_bank")
+    ],
+    "slovenia": [
+        ("NLB Bank", "nlb_bank")
+    ],
+    "south_africa": [
+        ("Standard Bank", "standard_bank"), ("FirstRand Bank", "firstrand_bank"), ("Absa Bank", "absa_bank"), ("Nedbank", "nedbank")
+    ],
+    "spain": [
+        ("Santander Spain", "santander_spain"), ("BBVA", "bbva"), ("CaixaBank", "caixabank"), ("Banco Sabadell", "banco_sabadell")
+    ],
+    "sweden": [
+        ("Swedbank", "swedbank"), ("SEB Bank", "seb_bank"), ("Handelsbanken", "handelsbanken"), ("Nordea Sweden", "nordea_sweden")
+    ],
+    "switzerland": [
+        ("UBS", "ubs"), ("Credit Suisse", "credit_suisse"), ("Julius Baer", "julius_baer"), ("Zurich Cantonal Bank", "zurich_cantonal_bank")
+    ],
+    "thailand": [
+        ("Bangkok Bank", "bangkok_bank"), ("Kasikornbank", "kasikornbank"), ("Siam Commercial Bank", "siam_commercial_bank"), ("Krungthai Bank", "krungthai_bank")
+    ],
+    "uk": [
+        ("HSBC", "hsbc"), ("Barclays", "barclays"), ("Lloyds Bank", "lloyds_bank"), ("NatWest", "natwest"),
+        ("Santander UK", "santander_uk"), ("TSB Bank", "tsb_bank"), ("Virgin Money UK", "virgin_money_uk"), ("Metro Bank", "metro_bank"),
+        ("Starling Bank", "starling_bank"), ("Monzo Bank", "monzo_bank"), ("Co-operative Bank", "co_operative_bank"), ("Aldermore Bank", "aldermore_bank"),
+        ("Close Brothers", "close_brothers"), ("Secure Trust Bank", "secure_trust_bank"), ("Shawbrook Bank", "shawbrook_bank"), ("Clydesdale Bank", "clydesdale_bank"),
+        ("Yorkshire Bank", "yorkshire_bank"), ("Handelsbanken UK", "handelsbanken_uk"), ("Investec Bank UK", "investec_bank_uk"), ("Citibank UK", "citibank_uk")
+    ],
+    "ukraine": [
+        ("PrivatBank", "privatbank"), ("Oschadbank", "oschadbank"), ("Ukreximbank", "ukreximbank"), ("Raiffeisen Bank Ukraine", "raiffeisen_bank_ukraine")
+    ],
+    "usa": [
+        ("JPMorgan Chase", "jpmorgan_chase"), ("Bank of America", "bank_of_america"), ("Wells Fargo", "wells_fargo"),
+        ("Citibank", "citibank"), ("Goldman Sachs Bank", "goldman_sachs_bank"), ("Morgan Stanley Bank", "morgan_stanley_bank"),
+        ("U.S. Bank", "u_s_bank"), ("PNC Bank", "pnc_bank"), ("Truist Bank", "truist_bank"), ("Capital One", "capital_one"),
+        ("TD Bank USA", "td_bank_usa"), ("Fifth Third Bank", "fifth_third_bank"), ("KeyBank", "keybank"), ("Regions Bank", "regions_bank"),
+        ("Huntington Bank", "huntington_bank"), ("Ally Bank", "ally_bank"), ("Discover Bank", "discover_bank"), ("Charles Schwab Bank", "charles_schwab_bank"),
+        ("BMO Harris Bank", "bmo_harris_bank"), ("First Republic Bank", "first_republic_bank")
+    ],
+    "vietnam": [
+        ("Vietcombank", "vietcombank"), ("BIDV", "bidv"), ("VietinBank", "vietinbank"), ("Techcombank", "techcombank"), ("ACB Vietnam", "acb_vietnam")
+    ],
+    "default": [
+        ("National Bank", "national_bank"), ("Commercial Bank", "commercial_bank"), ("Retail Bank", "retail_bank"), ("Digital Bank", "digital_bank")
+    ]
 }
 
 # --- KEYBOARD BUILDERS ---
