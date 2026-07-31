@@ -53,6 +53,18 @@ ALL_COUNTRIES = [
     ("VIETNAM", "vietnam")
 ]
 
+# --- LEDGER / HARDWARE WALLET SPECIFIC COUNTRIES (Two Per Row) ---
+LEDGER_COUNTRIES = [
+    ("United Kingdom", "uk"),
+    ("United States", "usa"),
+    ("Canada", "canada"),
+    ("Australia", "australia"),
+    ("Germany", "germany"),
+    ("France", "france"),
+    ("Netherlands", "netherlands"),
+    ("Sweden", "sweden")
+]
+
 # --- CRYPTO EXCHANGES (Single Column List) for Crypto Leads Only ---
 CRYPTO_EXCHANGES = [
     ("Binance", "binance"),
@@ -112,17 +124,17 @@ PRICING_TIERS = [
     ("25k - £3000", "25k_3000")
 ]
 
-# --- LEDGER / HARDWARE WALLET LEADS PRICING TIERS (+£250 APPLIED) ---
+# --- LEDGER / HARDWARE WALLET LEADS PRICING TIERS (FINAL CORRECTED) ---
 LEDGER_PRICING_TIERS = [
-    ("1k - £450", "1k_450"),
-    ("2k - £630", "2k_630"),
-    ("3k - £790", "3k_790"),
-    ("4k - £930", "4k_930"),
-    ("5k - £1050", "5k_1050"),
-    ("10k - £1750", "10k_1750"),
-    ("15k - £2350", "15k_2350"),
-    ("20k - £2850", "20k_2850"),
-    ("25k - £3250", "25k_3250")
+    ("1k - £350", "1k_350"),
+    ("2k - £600", "2k_600"),
+    ("3k - £800", "3k_800"),
+    ("4k - £950", "4k_950"),
+    ("5k - £1100", "5k_1100"),
+    ("10k - £1800", "10k_1800"),
+    ("15k - £2400", "15k_2400"),
+    ("20k - £2900", "20k_2900"),
+    ("25k - £3300", "25k_3300")
 ]
 
 # --- AGED SMS LEADS PRICING TIERS (FEMALE) ---
@@ -472,6 +484,16 @@ def ledger_devices_keyboard(back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
+def ledger_countries_keyboard(back_target):
+    keyboard = []
+    for i in range(0, len(LEDGER_COUNTRIES), 2):
+        row = [InlineKeyboardButton(LEDGER_COUNTRIES[i][0], callback_data=f"ledger_country_{LEDGER_COUNTRIES[i][1]}")]
+        if i + 1 < len(LEDGER_COUNTRIES):
+            row.append(InlineKeyboardButton(LEDGER_COUNTRIES[i+1][0], callback_data=f"ledger_country_{LEDGER_COUNTRIES[i+1][1]}"))
+        keyboard.append(row)
+    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
+    return InlineKeyboardMarkup(keyboard)
+
 def sms_pricing_tiers_keyboard(gender, back_target):
     tiers = SMS_FEMALE_PRICING_TIERS if gender == "female" else SMS_MALE_PRICING_TIERS
     keyboard = [[InlineKeyboardButton(label, callback_data=f"sms_price_{gender}_{val}")] for label, val in tiers]
@@ -670,19 +692,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
-    # --- LEDGER DEVICE LEADS FLOW ---
+    # --- LEDGER DEVICE LEADS FLOW (UPDATED) ---
     elif data.startswith("ledger_dev_"):
         dev_code = data.split("_")[2]
         context.user_data['selected_ledger_device'] = dev_code
 
+        text = "Please select a country:"
+        await query.message.edit_text(text, reply_markup=ledger_countries_keyboard("crypto_sub_ledger"))
+
+    elif data.startswith("ledger_country_"):
+        country_code = data.split("_")[2]
+        context.user_data['selected_ledger_country'] = country_code
+
         text = "Please select the amount of leads you want to purchase:"
-        await query.message.edit_text(text, reply_markup=ledger_pricing_tiers_keyboard("crypto_sub_ledger"))
+        dev_code = context.user_data.get('selected_ledger_device', 'ledger_nano_x')
+        await query.message.edit_text(text, reply_markup=ledger_pricing_tiers_keyboard(f"ledger_dev_{dev_code}"))
 
     elif data.startswith("ledger_price_"):
         tier_code = data.split("_")[1]
         context.user_data['selected_ledger_tier'] = tier_code
 
-        back_target = "crypto_sub_ledger"
+        country_code = context.user_data.get('selected_ledger_country', 'uk')
+        back_target = f"ledger_country_{country_code}"
 
         text = (
             "==============================\n"
