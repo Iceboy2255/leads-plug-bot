@@ -275,6 +275,8 @@ EMAIL_SUBCATEGORIES = {
     ]
 }
 
+categories = EMAIL_SUBCATEGORIES
+
 # --- BANK LEADS MAPPING FOR ALL COUNTRIES ---
 COUNTRY_BANKS = {
     "australia": [
@@ -725,11 +727,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text(text, reply_markup=email_categories_keyboard("category_email"))
 
     elif data.startswith("email_cat_"):
-        cat_code = data.split("_")[2]
+        cat_code = "_".join(data.split("_")[2:])
         context.user_data['selected_email_category'] = cat_code
 
         selected_category = cat_code
-        subcategories = EMAIL_SUBCATEGORIES.get(selected_category)
+        subcategories = categories.get(selected_category)
         if not subcategories:
             if selected_category == "social_media":
                 subcategories = [
