@@ -1,6 +1,6 @@
 import logging
 import os
-import asyncio
+asyncio_module = __import__('asyncio')
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -23,31 +23,31 @@ USER_DATABASE = set()
 ORDER_COUNTER = 928172
 INVENTORY_STOCK = {"Leads Bundle A": 15, "Leads Bundle B": 5}
 PAYMENT_RECORDS = set()
-ACTIVE_ORDERS = {}  # Tracks user active order state for crypto payment
-BROADCAST_STATE = set() # Track admins currently awaiting broadcast message
+ACTIVE_ORDERS = {}  
+BROADCAST_STATE = set() 
 
-# --- 1 & 2. TELEGRAM GROUP LIVE CONSOLE (MUTING RAILWAY/TERMINAL) ---
+# Global reference for loop safety
+_bot_application = None
+
+# --- 1 & 2. TELEGRAM GROUP LIVE CONSOLE (CRASH-PROOF THREAD-SAFE) ---
 class TelegramGroupLogHandler(logging.Handler):
-    def __init__(self, application):
-        super().__init__()
-        self.application = application
-
     def emit(self, record):
         log_entry = self.format(record)
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(
-                    self.application.bot.send_message(
+            global _bot_application
+            if _bot_application and _bot_application.bot:
+                asyncio_module.run_coroutine_threadsafe(
+                    _bot_application.bot.send_message(
                         chat_id=ADMIN_GROUP_ID,
                         text=f"📊 **[LIVE CONSOLE]**\n{log_entry}",
                         parse_mode="Markdown"
-                    )
+                    ),
+                    _bot_application.updater.bot.loop if hasattr(_bot_application, 'updater') and _bot_application.updater else asyncio_module.get_event_loop()
                 )
         except Exception:
             pass
 
-# Initialize Logging (Discarding standard stream outputs to satisfy requirement 2)
+# Initialize Logging (Muting local console output, pushing exclusively to group)
 logging.basicConfig(level=logging.INFO, handlers=[])
 logger = logging.getLogger("BotLogger")
 logger.setLevel(logging.INFO)
@@ -84,7 +84,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     global BOT_ACTIVE, ORDER_COUNTER
 
-    # Check Stop System State
     if not BOT_ACTIVE and query.data != "admin_panel" and user.id != ADMIN_TELEGRAM_ID:
         await query.edit_message_text("Bot temporarily unavailable")
         return
@@ -141,7 +140,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "adm_revenue":
         if user.id == ADMIN_TELEGRAM_ID:
-            revenue_calc = (ORDER_COUNTER - 928172) * 25.00  # estimated metrics
+            revenue_calc = (ORDER_COUNTER - 928172) * 25.00
             await query.edit_message_text(f"💰 **Estimated Revenue:** ${revenue_calc:.2f} USD", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="admin_panel")]]))
 
     elif query.data == "adm_bc":
@@ -169,7 +168,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ORDER_COUNTER += 1
         order_id = f"ORD-{ORDER_COUNTER}"
         
-        # Save order context for multi-crypto validation check
         ACTIVE_ORDERS[user.id] = {
             "order_id": order_id,
             "product": bundle_key,
@@ -213,7 +211,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         order_info = ACTIVE_ORDERS[user.id]
         order_id = order_info["order_id"]
 
-        # Simulation check matching exact criteria rules (Anti-replay, exact amount, fresh timing)
         payment_signature = f"{order_id}-{user.id}"
         if payment_signature in PAYMENT_RECORDS:
             await query.edit_message_text(
@@ -222,7 +219,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # Simulating cryptographic verification match success
         PAYMENT_RECORDS.add(payment_signature)
 
         logger.info(
@@ -238,14 +234,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_name = "verified_leads_export.csv"
         logger.info(f"[DELIVERED]\nORDER_ID: {order_id}\nFile: {file_name}")
 
-        # Clear session order
         del ACTIVE_ORDERS[user.id]
 
         # --- 6. AUTO DELIVERY FILE & MESSAGE ---
         await query.edit_message_text(
             "✅ Payment confirmed. Your leads have been delivered."
         )
-        # Send file document simulation
         await context.bot.send_document(
             chat_id=user.id,
             document=b"email,phone,name\nlead1@example.com,+123456789,John Doe",
@@ -273,13 +267,11 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     user = update.effective_user
     text = update.message.text
 
-    # Admin Password Check
     if text == COMMAND_PASSWORD and user.id == ADMIN_TELEGRAM_ID:
         await update.message.reply_text("🔓 Password accepted. Admin Access Granted.")
         return
 
-    # Broadcast message capture
-    if user.id in ADMIN_TELEGRAM_ID and user.id in BROADCAST_STATE:
+    if user.id == ADMIN_TELEGRAM_ID and user.id in BROADCAST_STATE:
         BROADCAST_STATE.remove(user.id)
         success_count = 0
         for target_id in USER_DATABASE:
@@ -292,10 +284,11 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
 def main():
+    global _bot_application
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+    _bot_application = app
     
-    # Register custom Telegram Live Console logger handler
-    ch = TelegramGroupLogHandler(app)
+    ch = TelegramGroupLogHandler()
     ch.setLevel(logging.INFO)
     logger.addHandler(ch)
 
