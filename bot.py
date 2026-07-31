@@ -53,18 +53,6 @@ ALL_COUNTRIES = [
     ("VIETNAM", "vietnam")
 ]
 
-# --- LEDGER / HARDWARE WALLET SPECIFIC COUNTRIES (Two Per Row) ---
-LEDGER_COUNTRIES = [
-    ("United Kingdom", "uk"),
-    ("United States", "usa"),
-    ("Canada", "canada"),
-    ("Australia", "australia"),
-    ("Germany", "germany"),
-    ("France", "france"),
-    ("Netherlands", "netherlands"),
-    ("Sweden", "sweden")
-]
-
 # --- CRYPTO EXCHANGES (Single Column List) for Crypto Leads Only ---
 CRYPTO_EXCHANGES = [
     ("Binance", "binance"),
@@ -77,28 +65,6 @@ CRYPTO_EXCHANGES = [
     ("Kucoin", "kucoin"),
     ("Mexc", "mexc"),
     ("Bitfinex", "bitfinex")
-]
-
-# --- LEDGER DEVICES (HARDWARE WALLETS) ---
-LEDGER_DEVICES = [
-    ("Blockstream Jade", "blockstream_jade"),
-    ("SafePal S1", "safepal_s1"),
-    ("SafePal X1", "safepal_x1"),
-    ("Tangem Card", "tangem_card"),
-    ("Tangem Ring", "tangem_ring"),
-    ("CoolWallet Pro", "coolwallet_pro"),
-    ("CoolWallet S", "coolwallet_s"),
-    ("OneKey Classic", "onekey_classic"),
-    ("Ledger Flex", "ledger_flex"),
-    ("Ledger Stax", "ledger_stax"),
-    ("Trezor Model One", "trezor_model_one"),
-    ("Trezor Safe 3", "trezor_safe_3"),
-    ("Trezor Safe 5", "trezor_safe_5"),
-    ("ELLIPAL Titan 2.0", "ellipal_titan_2_0"),
-    ("ELLIPAL Titan Mini", "ellipal_titan_mini"),
-    ("Keystone 3 Pro", "keystone_3_pro"),
-    ("Ledger Nano S Plus", "ledger_nano_s_plus"),
-    ("Ledger Nano X", "ledger_nano_x")
 ]
 
 # --- PAYMENT WALLETS WITH EXACT ADDRESSES ---
@@ -474,26 +440,6 @@ def pricing_tiers_keyboard(back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
-def ledger_pricing_tiers_keyboard(back_target):
-    keyboard = [[InlineKeyboardButton(label, callback_data=f"ledger_price_{val}")] for label, val in LEDGER_PRICING_TIERS]
-    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
-    return InlineKeyboardMarkup(keyboard)
-
-def ledger_devices_keyboard(back_target):
-    keyboard = [[InlineKeyboardButton(name, callback_data=f"ledger_dev_{code}")] for name, code in LEDGER_DEVICES]
-    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
-    return InlineKeyboardMarkup(keyboard)
-
-def ledger_countries_keyboard(back_target):
-    keyboard = []
-    for i in range(0, len(LEDGER_COUNTRIES), 2):
-        row = [InlineKeyboardButton(LEDGER_COUNTRIES[i][0], callback_data=f"ledger_country_{LEDGER_COUNTRIES[i][1]}")]
-        if i + 1 < len(LEDGER_COUNTRIES):
-            row.append(InlineKeyboardButton(LEDGER_COUNTRIES[i+1][0], callback_data=f"ledger_country_{LEDGER_COUNTRIES[i+1][1]}"))
-        keyboard.append(row)
-    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
-    return InlineKeyboardMarkup(keyboard)
-
 def sms_pricing_tiers_keyboard(gender, back_target):
     tiers = SMS_FEMALE_PRICING_TIERS if gender == "female" else SMS_MALE_PRICING_TIERS
     keyboard = [[InlineKeyboardButton(label, callback_data=f"sms_price_{gender}_{val}")] for label, val in tiers]
@@ -626,8 +572,38 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard("category_crypto"))
 
     elif data == "crypto_sub_ledger":
-        text = "Please select a hardware wallet device:"
-        await query.message.edit_text(text, reply_markup=ledger_devices_keyboard("category_crypto"))
+        text = (
+            "🌍 **AVAILABLE COUNTRIES:**\n\n"
+            "• United Kingdom\n"
+            "• United States\n"
+            "• Canada\n"
+            "• Australia\n"
+            "• Germany\n"
+            "• France\n"
+            "• Netherlands\n"
+            "• Sweden\n\n"
+            "🔗 **SUPPORTED EXCHANGES:**\n\n"
+            "• Binance\n"
+            "• Coinbase\n"
+            "• Kraken\n"
+            "• Bybit\n"
+            "• KuCoin\n"
+            "• OKX\n"
+            "• Gate.io\n"
+            "• Crypto.com\n\n"
+            "💰 **PRICING:**\n\n"
+            "1k - £350\n"
+            "2k - £600\n"
+            "3k - £800\n"
+            "4k - £950\n"
+            "5k - £1100\n"
+            "10k - £1800\n"
+            "15k - £2400\n"
+            "20k - £2900\n"
+            "25k - £3300"
+        )
+        keyboard = [[InlineKeyboardButton("Back", callback_data="category_crypto")]]
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
     # --- EMAIL LEADS FLOW ---
     elif data.startswith("email_country_"):
@@ -682,38 +658,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         country = context.user_data.get('selected_crypto_country', 'uk')
         back_target = f"crypto_country_{country}"
-
-        text = (
-            "==============================\n"
-            "💳 **Select Payment Wallet**\n"
-            "==============================\n\n"
-            "Please choose your preferred cryptocurrency to complete the payment.\n\n"
-            "<i>Minimum deposit: £50</i>"
-        )
-        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
-
-    # --- LEDGER DEVICE LEADS FLOW (UPDATED) ---
-    elif data.startswith("ledger_dev_"):
-        dev_code = data.split("_")[2]
-        context.user_data['selected_ledger_device'] = dev_code
-
-        text = "Please select a country:"
-        await query.message.edit_text(text, reply_markup=ledger_countries_keyboard("crypto_sub_ledger"))
-
-    elif data.startswith("ledger_country_"):
-        country_code = data.split("_")[2]
-        context.user_data['selected_ledger_country'] = country_code
-
-        text = "Please select the amount of leads you want to purchase:"
-        dev_code = context.user_data.get('selected_ledger_device', 'ledger_nano_x')
-        await query.message.edit_text(text, reply_markup=ledger_pricing_tiers_keyboard(f"ledger_dev_{dev_code}"))
-
-    elif data.startswith("ledger_price_"):
-        tier_code = data.split("_")[1]
-        context.user_data['selected_ledger_tier'] = tier_code
-
-        country_code = context.user_data.get('selected_ledger_country', 'uk')
-        back_target = f"ledger_country_{country_code}"
 
         text = (
             "==============================\n"
