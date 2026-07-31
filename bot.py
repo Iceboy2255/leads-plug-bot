@@ -570,69 +570,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target))
 
     elif data == "verify_payment":
-        order_id = context.user_data.get('current_order_id')
-        if not order_id or user.id not in ACTIVE_ORDERS and order_id not in [o.get("id") for o in ACTIVE_ORDERS.values()]:
-            pass
+        order_id = context.user_data.get('current_order_id', 'UNKNOWN')
+        await send_log_to_group(context.bot, f"{uname} clicked \"I PAID\" for order #{order_id}")
 
-        await send_log_to_group(context.bot, f"{user_identifier} clicked \"I PAID\" for order #{order_id}")
-
-        selected_crypto = context.user_data.get('selected_crypto', 'BTC')
-        wallet_addr = WALLET_ADDRESSES.get(selected_crypto.lower(), WALLET_ADDRESSES['btc'])
-        crypto_amt = calculate_crypto_amount(50, selected_crypto)
-
-        # Pending State Display
-        pending_text = (
-            f"Deposit Status ({selected_crypto})\n\n"
-            f"Deposit Address:\n{wallet_addr}\n\n"
-            f"Amount Sent:\n{crypto_amt} {selected_crypto}\n\n"
-            f"Network: {selected_crypto}\n\n"
-            "Confirmations: 0/3\n\n"
-            "Status: Waiting for confirmation..."
+        waiting_text = (
+            "⏳ Payment submitted for review.\n\n"
+            "Our team is verifying your transaction.\n"
+            "You will be credited shortly."
         )
-        await query.message.edit_text(pending_text)
-
-        payment_signature = f"{order_id}-{user.id}"
-        if payment_signature in PAYMENT_RECORDS:
-            await query.edit_message_text(
-                "❌ Payment not detected or incorrect\n"
-                "Please send exact amount to correct wallet and try again"
-            )
-            return
-
-        PAYMENT_RECORDS.add(payment_signature)
-
-        await send_log_to_group(
-            context.bot,
-            f"{user_identifier} payment confirmed for order #{order_id} ({selected_crypto})"
-        )
-
-        # Smart Stock Reduction
-        if INVENTORY_STOCK.get("default", 25) > 0:
-            INVENTORY_STOCK["default"] -= 1
-
-        file_name = "verified_leads_export.csv"
-        await send_log_to_group(context.bot, f"{user_identifier} received file for order #{order_id}")
-
-        current_bal = USER_BALANCES.get(user.id, 0.0) + float(crypto_amt)
-        USER_BALANCES[user.id] = current_bal
-        small_u = get_small_unit(selected_crypto, crypto_amt)
-
-        confirmed_text = (
-            f"Deposit Status ({selected_crypto})\n\n"
-            f"Deposit Address:\n{wallet_addr}\n\n"
-            f"Amount Received:\n{crypto_amt} {selected_crypto}\n\n"
-            "Status: Confirmed\n\n"
-            f"$ Current Balance: {current_bal} {selected_crypto}\n"
-            f"{small_u}\n\n"
-            "Estimated Value: £50.00\n\n"
-            "Your Balance: £50.00"
-        )
-        await query.message.edit_text(confirmed_text)
-        await context.bot.send_document(
-            chat_id=user.id,
-            document=b"email,phone,name\nlead1@example.com,+123456789,John Doe",
-            filename=file_name
-        )
+        await query.message.edit_text(waiting_text)
 
     # --- CATEGORY SELECTION ---
     elif data.startswith("category_"):
@@ -745,11 +691,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "wallet":
         user_id_val = query.from_user.id
         join_date = USER_JOIN_DATES.get(user_id_val, datetime.now().strftime("%m-%d-%Y"))
+        current_bal = USER_BALANCES.get(user_id_val, 0.0)
         await send_log_to_group(context.bot, f"{user_identifier} opened the wallet")
         text = (
             "==================================\n"
             f"🪪 ID: {user_id_val}\n"
-            f"💰 Balance: £0.00\n"
+            f"💰 Balance: £{current_bal:.2f}\n"
             f"🗓 Join Date: {join_date}\n"
             "==================================\n\n"
             "Select a top-up amount below:\n"
@@ -817,6 +764,54 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("Back", callback_data="main_menu")]]
         await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
+# --- ADMIN MANUAL CONFIRM COMMAND ---
+async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not user or user.id != ADMIN_TELEGRAM_ID:
+        return
+
+    args = context.args
+    if len(args) < 3:
+        await update.message.reply_text("❌ Usage: /confirm {user_id} {amount} {crypto}")
+        return
+
+    try:
+        target_user_id = int(args[0])
+        amount = float(args[1])
+        crypto = args[2].upper()
+    except ValueError:
+        await update.message.reply_text("❌ Invalid format. Use numbers for user_id and amount.")
+        return
+
+    # Validate target user exists in database
+    if target_user_id not in USER_DATABASE:
+        USER_DATABASE.add(target_user_id)
+
+    current_bal = USER_BALANCES.get(target_user_id, 0.0) + amount
+    USER_BALANCES[target_user_id] = current_bal
+
+    success_msg = (
+        "✅ Payment confirmed. Your account has been funded.\n\n"
+        f"Amount Added: £{amount:.2f}\n\n"
+        f"Your Balance: £{current_bal:.2f}"
+    )
+
+    # Check if a file was attached to the command message or replied to
+    attached_file = update.message.document or update.message.photo or update.message.audio or update.message.video
+
+    try:
+        await context.bot.send_message(chat_id=target_user_id, text=success_msg)
+        if attached_file:
+            if update.message.document:
+                file_id = update.message.document.file_id
+                await context.bot.send_document(chat_id=target_user_id, document=file_id)
+            elif update.message.photo:
+                file_id = update.message.photo[-1].file_id
+                await context.bot.send_photo(chat_id=target_user_id, photo=file_id)
+        await update.message.reply_text(f"✅ Successfully confirmed payment and credited user {target_user_id} with £{amount:.2f}")
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Credited user balance, but failed to send message/file to user: {e}")
+
 # --- BROADCAST SYSTEM & PASSWORD AUTH HANDLER ---
 async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -848,6 +843,7 @@ def main():
     application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("confirm", confirm_command))
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_message_handler))
 
