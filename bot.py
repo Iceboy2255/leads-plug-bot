@@ -39,13 +39,12 @@ BROADCAST_STATE = set()
 # In-memory storage for user join dates
 USER_JOIN_DATES = {}
 
-# --- CRASH-PROOF TELEGRAM GROUP LIVE CONSOLE HELPER ---
+# --- HUMAN CHAT-STYLE LOG HELPER ---
 async def send_log_to_group(bot, log_text: str):
     try:
         await bot.send_message(
             chat_id=ADMIN_GROUP_ID,
-            text=f"📊 **[LIVE CONSOLE]**\n{log_text}",
-            parse_mode="Markdown"
+            text=log_text
         )
     except Exception:
         pass
@@ -131,7 +130,7 @@ PRICING_TIERS = [
 SMS_FEMALE_PRICING_TIERS = [
     ("1K - £45", "1k_45"), ("2K - £69", "2k_69"), ("3K - £87", "3k_87"),
     ("4K - £105", "4k_105"), ("5K - £115", "5k_115"), ("10K - £175", "10k_175"),
-    ("15K - £255", "15k_255"), ("20K - £315", "20k_315"), ("25k - £375", "25k_375"),
+    ("15K - £255", "15k_255"), ("20K - £315", "2k_315"), ("25k - £375", "25k_375"),
     ("30k - £455", "30k_455"), ("35k - £505", "35k_505"), ("40k - £535", "40k_535"),
     ("45k - £555", "45k_555"), ("50k - £575", "50k_575"), ("100k - £715", "100k_715"),
     ("200k - £1015", "200k_1015"), ("500k - £1615", "500k_1615"), ("1M - £2015", "1m_2015")
@@ -389,9 +388,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if user and user.id != ADMIN_TELEGRAM_ID:
+        uname = f"@{user.username}" if user.username else f"{user.first_name} ({user.id})"
         await send_log_to_group(
             context.bot,
-            f"[NEW USER]\nID: {user.id}\nUsername: @{user.username if user.username else 'None'}"
+            f"{uname} just started the bot"
         )
 
     welcome_text = (
@@ -422,8 +422,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("Bot temporarily unavailable")
         return
 
+    uname = f"@{user.username}" if user.username else f"{user.first_name}"
+    user_identifier = f"{uname} ({user.id})"
+
     if user.id != ADMIN_TELEGRAM_ID or not data.startswith("adm_"):
-        await send_log_to_group(context.bot, f"[BUTTON CLICK] User: @{user.username or user.id} clicked {data}")
+        await send_log_to_group(context.bot, f"{user_identifier} clicked {data}")
 
     if data == "main_menu":
         await start(update, context)
@@ -438,13 +441,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "adm_start":
         if user.id == ADMIN_TELEGRAM_ID:
             BOT_ACTIVE = True
-            await send_log_to_group(context.bot, f"[ADMIN] Bot started by @{user.username or user.id}")
+            await send_log_to_group(context.bot, f"{user_identifier} started the bot")
             await query.edit_message_text("🟢 Bot status changed to: ACTIVE", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="admin_panel")]]))
 
     elif data == "adm_stop":
         if user.id == ADMIN_TELEGRAM_ID:
             BOT_ACTIVE = False
-            await send_log_to_group(context.bot, f"[ADMIN] Bot stopped by @{user.username or user.id}")
+            await send_log_to_group(context.bot, f"{user_identifier} stopped the bot")
             await query.edit_message_text("🔴 Bot status changed to: STOPPED", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="admin_panel")]]))
 
     elif data == "adm_dash":
@@ -480,6 +483,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --- SMART STOCK & ORDER CREATION TRIGGER ---
     elif data.startswith(("price_", "ledger_price_", "sms_price_", "bank_price_", "email_price_")):
         if INVENTORY_STOCK.get("default", 25) <= 0:
+            await send_log_to_group(context.bot, f"{user_identifier} tried to buy fullz, but no credits")
             await query.edit_message_text("Out of stock")
             return
 
@@ -494,8 +498,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await send_log_to_group(
             context.bot,
-            f"[ORDER]\nORDER_ID: {order_id}\nUser: @{user.username or user.id}\n"
-            f"Product: {product_name}\nCountry: Global\nAmount: 1\nPrice: £50+"
+            f"{user_identifier} created order #{order_id} for {product_name} (Global) - £50+"
         )
 
         # Route to wallet selection
@@ -529,8 +532,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "verify_payment":
         order_id = context.user_data.get('current_order_id')
         if not order_id or user.id not in ACTIVE_ORDERS and order_id not in [o.get("id") for o in ACTIVE_ORDERS.values()]:
-            # Simulate order attachment if missing from direct context dictionary
             pass
+
+        await send_log_to_group(context.bot, f"{user_identifier} clicked \"I PAID\" for order #{order_id}")
 
         payment_signature = f"{order_id}-{user.id}"
         if payment_signature in PAYMENT_RECORDS:
@@ -541,11 +545,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         PAYMENT_RECORDS.add(payment_signature)
+        chosen_crypto = context.user_data.get('selected_crypto', 'BTC')
 
         await send_log_to_group(
             context.bot,
-            f"[PAYMENT CONFIRMED]\nORDER_ID: {order_id}\n"
-            f"User: @{user.username or user.id}\nCrypto: {context.user_data.get('selected_crypto', 'BTC')}\nAmount: £50"
+            f"{user_identifier} payment confirmed for order #{order_id} ({chosen_crypto})"
         )
 
         # Smart Stock Reduction
@@ -553,7 +557,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             INVENTORY_STOCK["default"] -= 1
 
         file_name = "verified_leads_export.csv"
-        await send_log_to_group(context.bot, f"[DELIVERED]\nORDER_ID: {order_id}\nFile: {file_name}")
+        await send_log_to_group(context.bot, f"{user_identifier} received file for order #{order_id}")
 
         await query.edit_message_text("✅ Payment confirmed. Your leads have been delivered.")
         await context.bot.send_document(
@@ -566,6 +570,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("category_"):
         cat_type = data.split("_")[1]
         context.user_data['selected_category'] = cat_type
+        await send_log_to_group(context.bot, f"{user_identifier} is browsing through {cat_type}")
 
         if cat_type == "bank":
             text = "Please select a country:"
@@ -670,11 +675,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # --- WALLET & TOP UP FLOW ---
     elif data == "wallet":
-        user_id = query.from_user.id
-        join_date = USER_JOIN_DATES.get(user_id, datetime.now().strftime("%m-%d-%Y"))
+        user_id_val = query.from_user.id
+        join_date = USER_JOIN_DATES.get(user_id_val, datetime.now().strftime("%m-%d-%Y"))
+        await send_log_to_group(context.bot, f"{user_identifier} opened the wallet")
         text = (
             "==================================\n"
-            f"🪪 ID: {user_id}\n"
+            f"🪪 ID: {user_id_val}\n"
             f"💰 Balance: £0.00\n"
             f"🗓 Join Date: {join_date}\n"
             "==================================\n\n"
@@ -685,6 +691,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("topup_"):
         amount = data.split("_")[1]
+        await send_log_to_group(context.bot, f"{user_identifier} opened the topup page for £{amount}")
         wallet_addr = WALLET_ADDRESSES.get("btc", "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a")
         text = (
             f"Top-up Amount: £{amount}\n\n"
