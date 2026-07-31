@@ -717,7 +717,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
-    # --- EMAIL LEADS FLOW (UPDATED STRICTLY) ---
+    # --- EMAIL LEADS FLOW (STEP BY STEP) ---
     elif data.startswith("email_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_email_country'] = country_code
