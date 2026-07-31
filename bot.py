@@ -675,7 +675,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         text = "📋 **Updated Packages**\nPlease select a package tier:"
         country = context.user_data.get('selected_email_country', 'uk')
-        await query.message.edit_text(text, reply_markup=email_pricing_tiers_keyboard(f"email_country_{country}"), parse_mode="Markdown")
+        await query.message.edit_text(text, reply_markup=email_pricing_tiers_keyboard(f"email_cat_{cat_code}"), parse_mode="Markdown")
 
     elif data.startswith("email_price_"):
         tier_code = data.split("_")[1]
@@ -834,13 +834,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --- FAQ SECTION ---
     elif data == "faq":
         text = (
-            "Frequently Asked Questions\n\n"
+            "📌 **FAQ**\n\n"
             "1. Select your desired leads category from the main menu.\n"
             "2. Choose your target country and specific parameters.\n"
-            "3. Complete your transaction via secure crypto payment options."
+            "3. Complete your transaction via secure crypto payment options.\n"
+            "4. Contact support for custom or fresh lead requests (data can be generated on demand).\n\n"
+            "📊 **Services Information:**\n\n"
+            "• SMS Send Outs – 100% landing rate\n"
+            "• Email Blast Services available\n"
+            "• Crypto & Bank SID (No Spam)\n\n"
+            "📞 **Support:**\n\n"
+            "Official Bot Support: @Leadsplugv3"
         )
         keyboard = [[InlineKeyboardButton("Back", callback_data="main_menu")]]
-        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 def main():
     if not TOKEN:
