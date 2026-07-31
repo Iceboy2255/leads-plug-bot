@@ -717,7 +717,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
-    # --- EMAIL LEADS FLOW (UPDATED) ---
+    # --- EMAIL LEADS FLOW (UPDATED STRICTLY) ---
     elif data.startswith("email_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_email_country'] = country_code
@@ -736,9 +736,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         subcat_code = data.split("_")[2]
         context.user_data['selected_email_subcat'] = subcat_code
 
-        text = "📋 **Updated Packages**\nPlease select a package tier:"
+        text = "Please select the amount of leads you want to purchase:"
         cat_code = context.user_data.get('selected_email_category', 'business')
-        await query.message.edit_text(text, reply_markup=email_pricing_tiers_keyboard(f"email_cat_{cat_code}"), parse_mode="Markdown")
+        await query.message.edit_text(text, reply_markup=email_pricing_tiers_keyboard(f"email_cat_{cat_code}"))
 
     elif data.startswith("email_price_"):
         tier_code = data.split("_")[1]
