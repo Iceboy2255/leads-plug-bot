@@ -268,7 +268,7 @@ EMAIL_SUBCATEGORIES = {
     "social_media": [
         ("Instagram Users", "instagram_users"),
         ("TikTok Users", "tiktok_users"),
-        ("Twitter (X) Users", "twitter_x_users"),
+        ("Twitter (X) Users", "twitter_users"),
         ("Facebook Users", "facebook_users"),
         ("LinkedIn Users", "linkedin_users"),
         ("YouTube Users", "youtube_users")
@@ -562,8 +562,7 @@ def email_categories_keyboard(back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
-def email_subcategories_keyboard(cat_code, back_target):
-    subcats = EMAIL_SUBCATEGORIES.get(cat_code, [])
+def email_subcategories_keyboard(subcats, back_target):
     keyboard = [[InlineKeyboardButton(name, callback_data=f"email_sub_{code}")] for name, code in subcats]
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
@@ -729,16 +728,31 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cat_code = data.split("_")[2]
         context.user_data['selected_email_category'] = cat_code
 
-        text = "Please select a subcategory:"
-        await query.message.edit_text(text, reply_markup=email_subcategories_keyboard(cat_code, f"email_country_{context.user_data.get('selected_email_country', 'uk')}"))
+        selected_category = cat_code
+        subcategories = EMAIL_SUBCATEGORIES.get(selected_category)
+        if not subcategories:
+            if selected_category == "social_media":
+                subcategories = [
+                    ("Instagram Users", "instagram_users"),
+                    ("TikTok Users", "tiktok_users"),
+                    ("Twitter (X) Users", "twitter_users"),
+                    ("Facebook Users", "facebook_users"),
+                    ("LinkedIn Users", "linkedin_users"),
+                    ("YouTube Users", "youtube_users")
+                ]
+
+        text = "Select Social Media Lead Type" if cat_code == "social_media" else "Please select a subcategory:"
+        back_target = f"email_country_{context.user_data.get('selected_email_country', 'uk')}"
+        await query.message.edit_text(text, reply_markup=email_subcategories_keyboard(subcategories, back_target))
 
     elif data.startswith("email_sub_"):
-        subcat_code = data.split("_")[2]
+        subcat_code = "_".join(data.split("_")[2:])
         context.user_data['selected_email_subcat'] = subcat_code
 
         text = "Please select the amount of leads you want to purchase:"
         cat_code = context.user_data.get('selected_email_category', 'business')
-        await query.message.edit_text(text, reply_markup=email_pricing_tiers_keyboard(f"email_cat_{cat_code}"))
+        back_target = f"email_cat_{cat_code}"
+        await query.message.edit_text(text, reply_markup=email_pricing_tiers_keyboard(back_target))
 
     elif data.startswith("email_price_"):
         tier_code = data.split("_")[1]
