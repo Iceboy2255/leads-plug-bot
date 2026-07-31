@@ -215,7 +215,7 @@ EMAIL_PRICING_TIERS = [
     ("1M — £13,950", "1m_13950")
 ]
 
-# --- EMAIL LEAD CATEGORIES ---
+# --- EMAIL LEAD CATEGORIES & SUBCATEGORIES ---
 EMAIL_CATEGORIES = [
     ("Business", "business"),
     ("Crypto", "crypto"),
@@ -224,6 +224,56 @@ EMAIL_CATEGORIES = [
     ("Shopping", "shopping"),
     ("Social Media", "social_media")
 ]
+
+EMAIL_SUBCATEGORIES = {
+    "business": [
+        ("E-commerce Owners", "ecommerce_owners"),
+        ("Real Estate Investors", "real_estate_investors"),
+        ("Small Business Owners", "small_business_owners"),
+        ("Dropshippers", "dropshippers"),
+        ("Agency Owners", "agency_owners"),
+        ("Consultants & Coaches", "consultants_coaches"),
+        ("Startup Founders", "startup_founders"),
+        ("Import/Export Businesses", "import_export_businesses"),
+        ("Local Service Businesses", "local_service_businesses"),
+        ("B2B Companies", "b2b_companies")
+    ],
+    "crypto": [
+        ("Binance", "binance"),
+        ("Coinbase", "coinbase"),
+        ("Kraken", "kraken"),
+        ("Bybit", "bybit"),
+        ("OKX", "okx"),
+        ("KuCoin", "kucoin"),
+        ("Bitstamp", "bitstamp"),
+        ("Gate.io", "gate_io"),
+        ("Gemini", "gemini"),
+        ("MEXC", "mexc")
+    ],
+    "gaming": [
+        ("eSports Players", "esports_players"),
+        ("Casino/Betting Users", "casino_betting_users"),
+        ("Gaming Communities", "gaming_communities")
+    ],
+    "music": [
+        ("Apple Music Users", "apple_music_users"),
+        ("Spotify Users", "spotify_users")
+    ],
+    "shopping": [
+        ("Online Shoppers", "online_shoppers"),
+        ("Amazon Users", "amazon_users"),
+        ("Shopify Customers", "shopify_customers"),
+        ("Subscription Buyers", "subscription_buyers")
+    ],
+    "social_media": [
+        ("Instagram Users", "instagram_users"),
+        ("TikTok Users", "tiktok_users"),
+        ("Twitter (X) Users", "twitter_x_users"),
+        ("Facebook Users", "facebook_users"),
+        ("LinkedIn Users", "linkedin_users"),
+        ("YouTube Users", "youtube_users")
+    ]
+}
 
 # --- BANK LEADS MAPPING FOR ALL COUNTRIES ---
 COUNTRY_BANKS = {
@@ -512,6 +562,12 @@ def email_categories_keyboard(back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
+def email_subcategories_keyboard(cat_code, back_target):
+    subcats = EMAIL_SUBCATEGORIES.get(cat_code, [])
+    keyboard = [[InlineKeyboardButton(name, callback_data=f"email_sub_{code}")] for name, code in subcats]
+    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
+    return InlineKeyboardMarkup(keyboard)
+
 def countries_keyboard(prefix, back_target):
     keyboard = []
     for i in range(0, len(ALL_COUNTRIES), 2):
@@ -661,7 +717,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
 
-    # --- EMAIL LEADS FLOW ---
+    # --- EMAIL LEADS FLOW (UPDATED) ---
     elif data.startswith("email_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_email_country'] = country_code
@@ -673,16 +729,23 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cat_code = data.split("_")[2]
         context.user_data['selected_email_category'] = cat_code
 
+        text = "Please select a subcategory:"
+        await query.message.edit_text(text, reply_markup=email_subcategories_keyboard(cat_code, f"email_country_{context.user_data.get('selected_email_country', 'uk')}"))
+
+    elif data.startswith("email_sub_"):
+        subcat_code = data.split("_")[2]
+        context.user_data['selected_email_subcat'] = subcat_code
+
         text = "📋 **Updated Packages**\nPlease select a package tier:"
-        country = context.user_data.get('selected_email_country', 'uk')
+        cat_code = context.user_data.get('selected_email_category', 'business')
         await query.message.edit_text(text, reply_markup=email_pricing_tiers_keyboard(f"email_cat_{cat_code}"), parse_mode="Markdown")
 
     elif data.startswith("email_price_"):
         tier_code = data.split("_")[1]
         context.user_data['selected_email_tier'] = tier_code
 
-        cat_code = context.user_data.get('selected_email_category', 'business')
-        back_target = f"email_cat_{cat_code}"
+        subcat_code = context.user_data.get('selected_email_subcat', 'ecommerce_owners')
+        back_target = f"email_sub_{subcat_code}"
 
         text = (
             "==============================\n"
