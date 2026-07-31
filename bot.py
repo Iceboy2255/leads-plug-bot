@@ -90,9 +90,31 @@ PRICING_TIERS = [
     ("25k - £3000", "25k_3000")
 ]
 
-# --- AGED SMS LEADS PRICING TIERS ---
-SMS_PRICING_TIERS = [
-    ("1k - £30", "1k_30"),
+# --- AGED SMS LEADS PRICING TIERS (FEMALE) ---
+SMS_FEMALE_PRICING_TIERS = [
+    ("1K - £45", "1k_45"),
+    ("2K - £69", "2k_69"),
+    ("3K - £87", "3k_87"),
+    ("4K - £105", "4k_105"),
+    ("5K - £115", "5k_115"),
+    ("10K - £175", "10k_175"),
+    ("15K - £255", "15k_255"),
+    ("20K - £315", "20k_315"),
+    ("25k - £375", "25k_375"),
+    ("30k - £455", "30k_455"),
+    ("35k - £505", "35k_505"),
+    ("40k - £535", "40k_535"),
+    ("45k - £555", "45k_555"),
+    ("50k - £575", "50k_575"),
+    ("100k - £715", "100k_715"),
+    ("200k - £1015", "200k_1015"),
+    ("500k - £1615", "500k_1615"),
+    ("1M - £2015", "1m_2015")
+]
+
+# --- AGED SMS LEADS PRICING TIERS (MALE) ---
+SMS_MALE_PRICING_TIERS = [
+    ("1K - £30", "1k_30"),
     ("2K - £54", "2k_54"),
     ("3K - £72", "3k_72"),
     ("4K - £90", "4k_90"),
@@ -156,7 +178,7 @@ EMAIL_CATEGORIES = [
     ("Social Media", "social_media")
 ]
 
-# --- UPDATED BANK LEADS MAPPING FOR ALL COUNTRIES ---
+# --- BANK LEADS MAPPING FOR ALL COUNTRIES ---
 COUNTRY_BANKS = {
     "australia": [
         ("Commonwealth Bank", "commonwealth_bank"), ("Westpac Bank", "westpac_bank"), ("ANZ Bank", "anz_bank"),
@@ -393,9 +415,22 @@ def pricing_tiers_keyboard(back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
-def sms_pricing_tiers_keyboard(back_target):
-    keyboard = [[InlineKeyboardButton(label, callback_data=f"sms_price_{val}")] for label, val in SMS_PRICING_TIERS]
+def sms_pricing_tiers_keyboard(gender, back_target):
+    tiers = SMS_FEMALE_PRICING_TIERS if gender == "female" else SMS_MALE_PRICING_TIERS
+    keyboard = [[InlineKeyboardButton(label, callback_data=f"sms_price_{gender}_{val}")] for label, val in tiers]
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
+    return InlineKeyboardMarkup(keyboard)
+
+def sms_gender_keyboard(back_target):
+    keyboard = [
+        [
+            InlineKeyboardButton("Female", callback_data="sms_gender_female"),
+            InlineKeyboardButton("Male", callback_data="sms_gender_male")
+        ],
+        [
+            InlineKeyboardButton("Back", callback_data=back_target)
+        ]
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 def bank_pricing_tiers_keyboard(back_target):
@@ -572,17 +607,26 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --- AGED SMS LEADS FLOW ---
     elif data.startswith("sms_country_"):
         country_code = data.split("_")[2]
-        context.user_data['selected_sms_country'] = country_code
+        context.user_data['selected_country'] = country_code
+
+        text = "Please select gender:"
+        await query.message.edit_text(text, reply_markup=sms_gender_keyboard("category_sms"))
+
+    elif data.startswith("sms_gender_"):
+        gender = data.split("_")[2]
+        context.user_data['selected_gender'] = gender
 
         text = "Please select the amount of leads you want to purchase:"
-        await query.message.edit_text(text, reply_markup=sms_pricing_tiers_keyboard("category_sms"))
+        country = context.user_data.get('selected_country', 'uk')
+        await query.message.edit_text(text, reply_markup=sms_pricing_tiers_keyboard(gender, f"sms_country_{country}"))
 
     elif data.startswith("sms_price_"):
-        tier_code = data.split("_")[1]
+        parts = data.split("_")
+        gender = parts[2]
+        tier_code = parts[3]
         context.user_data['selected_sms_tier'] = tier_code
 
-        country = context.user_data.get('selected_sms_country', 'uk')
-        back_target = f"sms_country_{country}"
+        back_target = f"sms_gender_{gender}"
 
         text = (
             "==============================\n"
