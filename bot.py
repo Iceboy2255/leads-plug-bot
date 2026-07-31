@@ -36,8 +36,41 @@ PAYMENT_RECORDS = set()
 ACTIVE_ORDERS = {}
 BROADCAST_STATE = set()
 
-# In-memory storage for user join dates
+# In-memory storage for user join dates & balances
 USER_JOIN_DATES = {}
+USER_BALANCES = {}
+
+# --- HELPER FOR CRYPTO AMOUNTS ---
+def calculate_crypto_amount(gbp_val, coin):
+    rates = {"BTC": 60000.0, "ETH": 2500.0, "LTC": 70.0, "USDT": 1.0}
+    rate = rates.get(coin, 1.0)
+    try:
+        val = float(gbp_val) / rate
+    except Exception:
+        val = 50.0 / rate
+    
+    if coin == "BTC":
+        return f"{val:.5f}"
+    elif coin == "ETH":
+        return f"{val:.4f}"
+    elif coin == "LTC":
+        return f"{val:.3f}"
+    else:
+        return f"{val:.2f}"
+
+def get_small_unit(coin, amount_str):
+    try:
+        val = float(amount_str)
+        if coin == "BTC":
+            return f"({int(val * 100000000)} sats)"
+        elif coin == "ETH":
+            return f"({int(val * 1000000000000000000)} wei)"
+        elif coin == "LTC":
+            return f"({int(val * 100000000)} litoshis)"
+        else:
+            return f"({int(val * 100)} cents)"
+    except Exception:
+        return "(units)"
 
 # --- HUMAN CHAT-STYLE LOG HELPER ---
 async def send_log_to_group(bot, log_text: str):
@@ -501,7 +534,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{user_identifier} created order #{order_id} for {product_name} (Global) - £50+"
         )
 
-        # Route to wallet selection
         tier_parts = data.split("_")
         back_target = "main_menu"
         if product_name == "price":
@@ -520,14 +552,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             subcat_code = context.user_data.get('selected_email_subcat', 'ecommerce_owners')
             back_target = f"email_sub_{subcat_code}"
 
+        selected_crypto = context.user_data.get('selected_crypto', 'BTC')
+        wallet_addr = WALLET_ADDRESSES.get(selected_crypto.lower(), WALLET_ADDRESSES['btc'])
+        crypto_amt = calculate_crypto_amount(50, selected_crypto)
+
         text = (
-            "==============================\n"
-            "💳 **Select Payment Wallet**\n"
-            "==============================\n\n"
-            "Please choose your preferred cryptocurrency to complete the payment.\n\n"
-            "<i>Minimum deposit: £50</i>"
+            f"Send exactly {crypto_amt} {selected_crypto} to the address below to get 50 credits\n\n"
+            f"{wallet_addr}\n\n"
+            "IMPORTANT:\n"
+            "!! Deposits are refundable (terms may apply)\n"
+            f"!! Double check the {selected_crypto} amount before sending\n"
+            "!! Anything UNDER or ABOVE the exact amount may delay processing\n"
+            "!! You will be funded after network confirmation\n"
+            "!! By sending, you agree to these terms\n"
+            f"!! DO NOT send in £ — send ONLY in {selected_crypto}"
         )
-        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target), parse_mode="HTML")
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target))
 
     elif data == "verify_payment":
         order_id = context.user_data.get('current_order_id')
@@ -535,6 +575,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
         await send_log_to_group(context.bot, f"{user_identifier} clicked \"I PAID\" for order #{order_id}")
+
+        selected_crypto = context.user_data.get('selected_crypto', 'BTC')
+        wallet_addr = WALLET_ADDRESSES.get(selected_crypto.lower(), WALLET_ADDRESSES['btc'])
+        crypto_amt = calculate_crypto_amount(50, selected_crypto)
+
+        # Pending State Display
+        pending_text = (
+            f"Deposit Status ({selected_crypto})\n\n"
+            f"Deposit Address:\n{wallet_addr}\n\n"
+            f"Amount Sent:\n{crypto_amt} {selected_crypto}\n\n"
+            f"Network: {selected_crypto}\n\n"
+            "Confirmations: 0/3\n\n"
+            "Status: Waiting for confirmation..."
+        )
+        await query.message.edit_text(pending_text)
 
         payment_signature = f"{order_id}-{user.id}"
         if payment_signature in PAYMENT_RECORDS:
@@ -545,11 +600,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         PAYMENT_RECORDS.add(payment_signature)
-        chosen_crypto = context.user_data.get('selected_crypto', 'BTC')
 
         await send_log_to_group(
             context.bot,
-            f"{user_identifier} payment confirmed for order #{order_id} ({chosen_crypto})"
+            f"{user_identifier} payment confirmed for order #{order_id} ({selected_crypto})"
         )
 
         # Smart Stock Reduction
@@ -559,7 +613,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_name = "verified_leads_export.csv"
         await send_log_to_group(context.bot, f"{user_identifier} received file for order #{order_id}")
 
-        await query.edit_message_text("✅ Payment confirmed. Your leads have been delivered.")
+        current_bal = USER_BALANCES.get(user.id, 0.0) + float(crypto_amt)
+        USER_BALANCES[user.id] = current_bal
+        small_u = get_small_unit(selected_crypto, crypto_amt)
+
+        confirmed_text = (
+            f"Deposit Status ({selected_crypto})\n\n"
+            f"Deposit Address:\n{wallet_addr}\n\n"
+            f"Amount Received:\n{crypto_amt} {selected_crypto}\n\n"
+            "Status: Confirmed\n\n"
+            f"$ Current Balance: {current_bal} {selected_crypto}\n"
+            f"{small_u}\n\n"
+            "Estimated Value: £50.00\n\n"
+            "Your Balance: £50.00"
+        )
+        await query.message.edit_text(confirmed_text)
         await context.bot.send_document(
             chat_id=user.id,
             document=b"email,phone,name\nlead1@example.com,+123456789,John Doe",
@@ -691,28 +759,45 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("topup_"):
         amount = data.split("_")[1]
+        context.user_data['topup_amount'] = amount
         await send_log_to_group(context.bot, f"{user_identifier} opened the topup page for £{amount}")
-        wallet_addr = WALLET_ADDRESSES.get("btc", "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a")
+        
+        selected_crypto = context.user_data.get('selected_crypto', 'BTC')
+        wallet_addr = WALLET_ADDRESSES.get(selected_crypto.lower(), WALLET_ADDRESSES['btc'])
+        crypto_amt = calculate_crypto_amount(amount, selected_crypto)
+
         text = (
-            f"Top-up Amount: £{amount}\n\n"
-            f"BTC Wallet Address:\n`{wallet_addr}`\n\n"
-            f"<i>Minimum top-up: £50</i>"
+            f"Send exactly {crypto_amt} {selected_crypto} to the address below to get {amount} credits\n\n"
+            f"{wallet_addr}\n\n"
+            "IMPORTANT:\n"
+            "!! Deposits are refundable (terms may apply)\n"
+            f"!! Double check the {selected_crypto} amount before sending\n"
+            "!! Anything UNDER or ABOVE the exact amount may delay processing\n"
+            "!! You will be funded after network confirmation\n"
+            "!! By sending, you agree to these terms\n"
+            f"!! DO NOT send in £ — send ONLY in {selected_crypto}"
         )
-        await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"), parse_mode="HTML")
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"))
 
     elif data.startswith("pay_"):
         coin = data.split("_")[1].upper()
         context.user_data['selected_crypto'] = coin
         wallet_addr = WALLET_ADDRESSES.get(coin.lower(), "N/A")
+        amount = context.user_data.get('topup_amount', '50')
+        crypto_amt = calculate_crypto_amount(amount, coin)
+
         text = (
-            "==============================\n"
-            f"**{coin} Payment Wallet**\n"
-            "==============================\n\n"
-            "Send the required amount to the address below:\n\n"
-            f"`{wallet_addr}`\n\n"
-            "<i>Minimum deposit: £50</i>"
+            f"Send exactly {crypto_amt} {coin} to the address below to get {amount} credits\n\n"
+            f"{wallet_addr}\n\n"
+            "IMPORTANT:\n"
+            "!! Deposits are refundable (terms may apply)\n"
+            f"!! Double check the {coin} amount before sending\n"
+            "!! Anything UNDER or ABOVE the exact amount may delay processing\n"
+            "!! You will be funded after network confirmation\n"
+            "!! By sending, you agree to these terms\n"
+            f"!! DO NOT send in £ — send ONLY in {coin}"
         )
-        await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"), parse_mode="HTML")
+        await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"))
 
     # --- FAQ SECTION ---
     elif data == "faq":
