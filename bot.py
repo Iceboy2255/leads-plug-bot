@@ -235,7 +235,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         keyboard = []
         for bin_num in current_slice:
-            keyboard.append([InlineKeyboardButton(str(bin_num), callback_data=f"au_buy_{price}_{bin_num}")])
+            keyboard.append([InlineKeyboardButton(str(bin_num), callback_data=f"base_buy_{price}_{bin_num}")])
             
         nav_row = []
         nav_row.append(InlineKeyboardButton("🔄 Refresh", callback_data=f"base_au_{price}_{page}"))
