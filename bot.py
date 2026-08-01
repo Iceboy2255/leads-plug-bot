@@ -274,6 +274,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text, reply_markup=reply_markup)
 
 def main():
+    if not TOKEN:
+        raise ValueError("BOT_TOKEN is missing from your environment or .env file.")
+        
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
