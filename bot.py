@@ -191,7 +191,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
-    # Handling Clean AU Base Lists with Pagination System and navigation buttons
+    # Handling Clean AU Base Lists with Pagination System and navigation buttons (matching UK layout exactly)
     elif query.data.startswith("base_au_"):
         parts = query.data.split("_")
         price = int(parts[2])
