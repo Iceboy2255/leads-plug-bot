@@ -33,7 +33,7 @@ UK_5_BASES = [
     412984, 416549, 436982, 446238, 446259
 ]
 
-# Clean and evenly distributed AU Base Lists based on provided data
+# Clean and safely separated AU Base Lists (guaranteed non-empty, pure integers, perfectly matched to UK architecture)
 AU_30_BASES = [
     251729, 401714, 401795, 402993, 404137, 405497, 423953, 423954, 426557, 431313, 434956, 434968
 ]
@@ -76,10 +76,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
 
-    # Handle individual base click with credit check and popup alerts for UK/AU
+    # Handle individual base click with credit check and popup alerts for UK/AU seamlessly without crashing
     if query.data.startswith("base_buy_") or query.data.startswith("au_buy_"):
         parts = query.data.split("_")
-        price = int(parts[2])
+        if len(parts) >= 3:
+            try:
+                price = int(parts[2])
+            except ValueError:
+                price = 0
+        else:
+            price = 0
         
         user_credits = context.user_data.get("credits", 0)
 
@@ -146,16 +152,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handling Clean UK Base Lists with Pagination System and navigation buttons
     elif query.data.startswith("base_uk_"):
         parts = query.data.split("_")
-        price = int(parts[2])
-        page = int(parts[3])
+        try:
+            price = int(parts[2])
+            page = int(parts[3])
+        except (IndexError, ValueError):
+            price = 5
+            page = 0
         
         bases_map = {30: UK_30_BASES, 20: UK_20_BASES, 10: UK_10_BASES, 5: UK_5_BASES}
-        bases_list = bases_map.get(price, [])
+        bases_list = bases_map.get(price, UK_5_BASES)
         
         items_per_page = 10
         total_pages = max(1, (len(bases_list) + items_per_page - 1) // items_per_page)
         
         if page >= total_pages:
+            page = 0
+        elif page < 0:
             page = 0
         
         start_idx = page * items_per_page
@@ -191,19 +203,25 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
-    # Handling Clean AU Base Lists with Pagination System and navigation buttons (matching UK layout exactly)
+    # Handling Clean AU Base Lists safely using identical robust pattern matching UK architecture
     elif query.data.startswith("base_au_"):
         parts = query.data.split("_")
-        price = int(parts[2])
-        page = int(parts[3])
+        try:
+            price = int(parts[2])
+            page = int(parts[3])
+        except (IndexError, ValueError):
+            price = 5
+            page = 0
         
         bases_map = {30: AU_30_BASES, 20: AU_20_BASES, 10: AU_10_BASES, 5: AU_5_BASES}
-        bases_list = bases_map.get(price, [])
+        bases_list = bases_map.get(price, AU_5_BASES)
         
         items_per_page = 10
         total_pages = max(1, (len(bases_list) + items_per_page - 1) // items_per_page)
         
         if page >= total_pages:
+            page = 0
+        elif page < 0:
             page = 0
         
         start_idx = page * items_per_page
