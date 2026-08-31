@@ -21,7 +21,17 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 # --- ADMIN CONFIGURATION ---
 ADMIN_TELEGRAM_ID = 7280810198
 ADMIN_GROUP_ID = -1003907566721
-COMMAND_PASSWORD = "myprince"
+
+# Secure Password Handling from Environment Variables
+COMMAND_PASSWORD = os.getenv("COMMAND_PASSWORD", "myprince")
+ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH")
+
+def verify_password(provided_password: str) -> bool:
+    if ADMIN_PASSWORD_HASH:
+        import hashlib
+        hashed = hashlib.sha256(provided_password.encode()).hexdigest()
+        return hashed == ADMIN_PASSWORD_HASH
+    return provided_password == COMMAND_PASSWORD
 
 # --- GLOBAL SYSTEM STATES ---
 BOT_ACTIVE = True
@@ -796,7 +806,6 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Your Balance: £{current_bal:.2f}"
     )
 
-    # Check if a file was attached to the command message or replied to
     attached_file = update.message.document or update.message.photo or update.message.audio or update.message.video
 
     try:
@@ -812,6 +821,88 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"⚠️ Credited user balance, but failed to send message/file to user: {e}")
 
+# --- NEW ADMIN COMMANDS: /userbal & /senduser ---
+
+async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not user or user.id != ADMIN_TELEGRAM_ID:
+        await update.message.reply_text("❌ Unauthorized access.")
+        return
+
+    args = context.args
+    if len(args) < 3:
+        await update.message.reply_text("❌ Usage: /userbal {user_id} {amount} {password}")
+        return
+
+    try:
+        target_user_id = int(args[0])
+        amount = float(args[1])
+        password_input = args[2]
+    except ValueError:
+        await update.message.reply_text("❌ Invalid format. User ID and amount must be numbers.")
+        return
+
+    if amount < 0:
+        await update.message.reply_text("❌ Amount cannot be negative.")
+        return
+
+    if not verify_password(password_input):
+        await update.message.reply_text("❌ Incorrect password.")
+        return
+
+    if target_user_id not in USER_DATABASE:
+        USER_DATABASE.add(target_user_id)
+
+    USER_BALANCES[target_user_id] = amount
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    audit_log = (
+        f"🛠 **AUDIT LOG: Balance Update**\n"
+        f"• Admin ID: {user.id}\n"
+        f"• Target User ID: {target_user_id}\n"
+        f"• New Balance Set: £{amount}\n"
+        f"• Timestamp: {timestamp}"
+    )
+    await send_log_to_group(context.bot, audit_log)
+
+    user_msg = f"✅ Balance update: £{amount} has been added to your balance."
+    try:
+        await context.bot.send_message(chat_id=target_user_id, text=user_msg)
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Balance updated internally, but failed to notify user: {e}")
+        return
+
+    admin_reply = (
+        f"✅ Balance updated successfully\n\n"
+        f"User ID: {target_user_id}\n"
+        f"Amount: £{amount}"
+    )
+    await update.message.reply_text(admin_reply)
+
+async def senduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not user or user.id != ADMIN_TELEGRAM_ID:
+        await update.message.reply_text("❌ Unauthorized access.")
+        return
+
+    args = context.args
+    if len(args) < 2:
+        await update.message.reply_text("❌ Usage: /senduser {user_id} {message}")
+        return
+
+    try:
+        target_user_id = int(args[0])
+        message_text = " ".join(args[1:])
+    except ValueError:
+        await update.message.reply_text("❌ Invalid format. User ID must be a number.")
+        return
+
+    try:
+        await context.bot.send_message(chat_id=target_user_id, text=message_text)
+        await update.message.reply_text("✅ Message sent successfully.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Failed to send message. Make sure the user has started the bot. Error: {e}")
+
 # --- BROADCAST SYSTEM & PASSWORD AUTH HANDLER ---
 async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -820,7 +911,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     if not user:
         return
 
-    if text == COMMAND_PASSWORD and user.id == ADMIN_TELEGRAM_ID:
+    if verify_password(text) and user.id == ADMIN_TELEGRAM_ID:
         await update.message.reply_text("🔓 Password accepted. Admin Access Granted.")
         return
 
@@ -844,10 +935,13 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("confirm", confirm_command))
+    application.add_handler(CommandHandler("userbal", userbal_command))
+    application.add_handler(CommandHandler("senduser", senduser_command))
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_message_handler))
-
     application.run_polling()
 
 if __name__ == "__main__":
     main()
+
+
