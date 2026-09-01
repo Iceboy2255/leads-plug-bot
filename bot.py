@@ -146,7 +146,21 @@ LEDGER_DEVICE_PRICING_TIERS = [
 CRYPTO_EXCHANGES = [
     ("Binance", "binance"), ("Bybit", "bybit"), ("Coinbase", "coinbase"),
     ("OKX", "okx"), ("Upbit", "upbit"), ("Bitget", "bitget"),
-    ("Kraken", "kraken"), ("Kucoin", "kucoin"), ("Mexc", "mexc"), ("Bitfinex", "bitfinex")
+    ("Kraken", "kraken"), ("Kucoin", "kucoin"), ("MEXC", "mexc"), ("Bitfinex", "bitfinex"),
+    ("Crypto.com", "crypto_com"), ("Gate.io", "gate_io"), ("HTX", "htx"),
+    ("Gemini", "gemini"), ("Bitstamp", "bitstamp"), ("CoinW", "coinw"),
+    ("BingX", "bingx"), ("Phemex", "phemex"), ("BitMart", "bitmart"),
+    ("LBank", "lbank"), ("WhiteBIT", "whitebit"), ("CoinEx", "coinex"),
+    ("XT.COM", "xt_com"), ("Deepcoin", "deepcoin"), ("Toobit", "toobit"),
+    ("BTCC", "btcc"), ("AscendEX", "ascendex"), ("Poloniex", "poloniex"),
+    ("Bitrue", "bitrue"), ("ProBit Global", "probit_global"), ("Coinstore", "coinstore"),
+    ("DigiFinex", "digifinex"), ("Bitunix", "bitunix"), ("WEEX", "weex"),
+    ("BloFin", "blofin"), ("Bitso", "bitso"), ("Mercado Bitcoin", "mercado_bitcoin"),
+    ("Coincheck", "coincheck"), ("bitFlyer", "bitflyer"), ("Zaif", "zaif"),
+    ("Bithumb", "bithumb"), ("Korbit", "korbit"), ("GOPAX", "gopax"),
+    ("Coinone", "coinone"), ("Independent Reserve", "independent_reserve"),
+    ("BTC Markets", "btc_markets"), ("Swyftx", "swyftx"), ("CoinSpot", "coinspot"),
+    ("NDAX", "ndax"), ("Bitbuy", "bitbuy")
 ]
 
 PAYMENT_WALLETS = [
@@ -323,7 +337,7 @@ def admin_panel_keyboard():
 def crypto_leads_home_keyboard(back_target):
     keyboard = [
         [
-            InlineKeyboardButton("Crypto Exchange Leads", callback_data="crypto_sub_exchange"),
+            InlineKeyboardButton("Crypto Exchange Leads", callback_data="crypto_sub_exchange_page_0"),
             InlineKeyboardButton("Ledger Device Leads", callback_data="crypto_sub_ledger")
         ],
         [
@@ -416,8 +430,33 @@ def banks_keyboard(country_code, back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
-def crypto_exchanges_keyboard(back_target):
-    keyboard = [[InlineKeyboardButton(name, callback_data=f"crypto_ex_{code}")] for name, code in CRYPTO_EXCHANGES]
+def crypto_exchanges_keyboard(page=0, back_target="category_crypto"):
+    page_size = 10
+    total_exchanges = len(CRYPTO_EXCHANGES)
+    total_pages = (total_exchanges + page_size - 1) // page_size
+    
+    if page < 0:
+        page = 0
+    elif page >= total_pages:
+        page = total_pages - 1
+        
+    start_idx = page * page_size
+    end_idx = min(start_idx + page_size, total_exchanges)
+    
+    keyboard = []
+    for i in range(start_idx, end_idx):
+        name, code = CRYPTO_EXCHANGES[i]
+        keyboard.append([InlineKeyboardButton(name, callback_data=f"crypto_ex_{code}")])
+        
+    nav_row = []
+    if page > 0:
+        nav_row.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"crypto_sub_exchange_page_{page - 1}"))
+    if page < total_pages - 1:
+        nav_row.append(InlineKeyboardButton("Next ➡️", callback_data=f"crypto_sub_exchange_page_{page + 1}"))
+        
+    if nav_row:
+        keyboard.append(nav_row)
+        
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
@@ -643,9 +682,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.edit_text(text, reply_markup=main_menu_keyboard(user.id))
 
     # --- CRYPTO LEADS SUB-MENU FLOW ---
-    elif data == "crypto_sub_exchange":
+    elif data.startswith("crypto_sub_exchange_page_"):
+        page_num = int(data.split("_")[-1])
         text = "Please select a crypto exchange:"
-        await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard("category_crypto"))
+        await query.message.edit_text(text, reply_markup=crypto_exchanges_keyboard(page=page_num, back_target="category_crypto"))
 
     elif data == "crypto_sub_ledger":
         text = "Please select a country:"
@@ -688,10 +728,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # --- CRYPTO EXCHANGE LEADS FLOW ---
     elif data.startswith("crypto_ex_"):
-        exchange_code = data.split("_")[2]
+        exchange_code = "_".join(data.split("_")[2:])
         context.user_data['selected_exchange'] = exchange_code
         text = "Please select a country:"
-        await query.message.edit_text(text, reply_markup=countries_keyboard("crypto_country", "crypto_sub_exchange"))
+        await query.message.edit_text(text, reply_markup=countries_keyboard("crypto_country", "crypto_sub_exchange_page_0"))
 
     elif data.startswith("crypto_country_"):
         country_code = data.split("_")[2]
@@ -934,6 +974,39 @@ async def senduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send message to user {target_user_id}. Error: {e}")
 
+# --- NEW ADMIN COMMAND: /sendalluser ---
+async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not user or user.id != ADMIN_TELEGRAM_ID:
+        await update.message.reply_text("❌ Unauthorized access.")
+        return
+
+    args = context.args
+    if not args:
+        await update.message.reply_text("❌ Usage: /sendalluser {your message here}")
+        return
+
+    message_text = " ".join(args)
+    success_count = 0
+    fail_count = 0
+
+    for target_id in USER_DATABASE:
+        try:
+            await context.bot.send_message(
+                chat_id=target_id, 
+                text=f"📢 **Announcement:**\n\n{message_text}", 
+                parse_mode="Markdown"
+            )
+            success_count += 1
+        except Exception:
+            fail_count += 1
+
+    await update.message.reply_text(
+        f"✅ Broadcast complete.\n\n"
+        f"• Successfully sent: {success_count}\n"
+        f"• Failed (blocked/inactive): {fail_count}"
+    )
+
 # --- BROADCAST SYSTEM & PASSWORD AUTH HANDLER ---
 async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -969,6 +1042,7 @@ def main():
     application.add_handler(CommandHandler("confirm", confirm_command))
     application.add_handler(CommandHandler("userbal", userbal_command))
     application.add_handler(CommandHandler("senduser", senduser_command))
+    application.add_handler(CommandHandler("sendalluser", sendalluser_command))
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_message_handler))
     application.run_polling()
