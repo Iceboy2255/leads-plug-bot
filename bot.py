@@ -190,7 +190,7 @@ SMS_FEMALE_PRICING_TIERS = [
 SMS_MALE_PRICING_TIERS = [
     ("1K - £30", "1k_30"), ("2K - £54", "2k_54"), ("3K - £72", "3k_72"),
     ("4K - £90", "4k_90"), ("5K - £100", "5k_100"), ("10K - £160", "10k_160"),
-    ("15K - £240", "15k_240"), ("20K - £300", "20k_300"), ("25k - £360", "25k_360"),
+    ("15K - £240", "15k_240"), ("20K - £300", "2k_300"), ("25k - £360", "25k_360"),
     ("30k - £440", "30k_440"), ("35k - £490", "35k_490"), ("40k - £520", "40k_520"),
     ("45k - £540", "45k_540"), ("50k - £560", "50k_560"), ("100k - £700", "100k_700"),
     ("200k - £1000", "200k_1000"), ("500k - £1600", "500k_1600"), ("1M - £2000", "1m_2000")
@@ -308,7 +308,7 @@ def main_menu_keyboard(user_id=None):
     keyboard = [
         [
             InlineKeyboardButton("Email Leads", callback_data="category_email"),
-            InlineKeyboardButton("Aged SMS Leads", callback_data="category_sms"),
+            InlineKeyboardButton("Aged Leads", callback_data="category_sms"),
             InlineKeyboardButton("Crypto Leads", callback_data="category_crypto")
         ],
         [
@@ -356,22 +356,42 @@ def ledger_device_pricing_keyboard(back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
-def sms_pricing_tiers_keyboard(gender, back_target):
+def sms_pricing_tiers_keyboard(gender, age_range, back_target):
     tiers = SMS_FEMALE_PRICING_TIERS if gender == "female" else SMS_MALE_PRICING_TIERS
-    keyboard = [[InlineKeyboardButton(label, callback_data=f"sms_price_{gender}_{val}")] for label, val in tiers]
+    keyboard = [[InlineKeyboardButton(label, callback_data=f"sms_price_{gender}_{age_range}_{val}")] for label, val in tiers]
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
 def sms_gender_keyboard(back_target):
     keyboard = [
         [
-            InlineKeyboardButton("Female", callback_data="sms_gender_female"),
-            InlineKeyboardButton("Male", callback_data="sms_gender_male")
+            InlineKeyboardButton("Female Leads", callback_data="sms_gender_female"),
+            InlineKeyboardButton("Male Leads", callback_data="sms_gender_male")
         ],
         [
             InlineKeyboardButton("Back", callback_data=back_target)
         ]
     ]
+    return InlineKeyboardMarkup(keyboard)
+
+def sms_age_ranges_keyboard(gender, back_target):
+    age_ranges = [
+        ("18–24", "18_24"),
+        ("25–34", "25_34"),
+        ("35–44", "35_44"),
+        ("45–54", "45_54"),
+        ("55–64", "55_64"),
+        ("65–74", "65_74"),
+        ("75–84", "75_84"),
+        ("85–94", "85_94")
+    ]
+    keyboard = []
+    for i in range(0, len(age_ranges), 2):
+        row = [InlineKeyboardButton(age_ranges[i][0], callback_data=f"sms_age_{gender}_{age_ranges[i][1]}")]
+        if i + 1 < len(age_ranges):
+            row.append(InlineKeyboardButton(age_ranges[i+1][0], callback_data=f"sms_age_{gender}_{age_ranges[i+1][1]}"))
+        keyboard.append(row)
+    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
 def bank_pricing_tiers_keyboard(back_target):
@@ -622,8 +642,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             device_code = context.user_data.get('selected_ledger_device', 'ledger_nano_x')
             back_target = f"ledger_device_{device_code}"
         elif product_name == "sms":
-            gender = tier_parts[2] if len(tier_parts) > 2 else "female"
-            back_target = f"sms_gender_{gender}"
+            gender = context.user_data.get('selected_gender', 'female')
+            age_range = context.user_data.get('selected_age_range', '18_24')
+            back_target = f"sms_age_{gender}_{age_range}"
         elif product_name == "bank":
             bank_name = context.user_data.get('selected_bank_name', 'bank')
             back_target = f"bank_name_{bank_name}"
@@ -739,7 +760,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "Please select the amount of leads you want to purchase:"
         await query.message.edit_text(text, reply_markup=pricing_tiers_keyboard(f"crypto_ex_{context.user_data.get('selected_exchange', 'binance')}"))
 
-    # --- AGED SMS LEADS FLOW ---
+    # --- AGED LEADS FLOW ---
     elif data.startswith("sms_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_country'] = country_code
@@ -749,9 +770,17 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("sms_gender_"):
         gender = data.split("_")[2]
         context.user_data['selected_gender'] = gender
-        text = "Please select the amount of leads you want to purchase:"
+        text = "Please select an age range:"
         country = context.user_data.get('selected_country', 'uk')
-        await query.message.edit_text(text, reply_markup=sms_pricing_tiers_keyboard(gender, f"sms_country_{country}"))
+        await query.message.edit_text(text, reply_markup=sms_age_ranges_keyboard(gender, f"sms_country_{country}"))
+
+    elif data.startswith("sms_age_"):
+        parts = data.split("_")
+        gender = parts[2]
+        age_range = "_".join(parts[3:])
+        context.user_data['selected_age_range'] = age_range
+        text = "Please select the amount of leads you want to purchase:"
+        await query.message.edit_text(text, reply_markup=sms_pricing_tiers_keyboard(gender, age_range, f"sms_gender_{gender}"))
 
     # --- BANK LEADS FLOW ---
     elif data.startswith("bank_country_"):
@@ -1049,3 +1078,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
