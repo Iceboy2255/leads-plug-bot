@@ -11,6 +11,8 @@ from telegram.ext import (
 )
 from datetime import datetime
 import hashlib
+import sqlite3
+import time
 
 # --- CRASH-PROOF & ZERO TERMINAL LOGS CONFIGURATION ---
 logging.basicConfig(level=logging.CRITICAL)
@@ -27,9 +29,114 @@ COMMAND_PASSWORD = "myprince"
 # Secure hash for the admin command password (SHA-256 of "myprince")
 COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
 
+# --- DATABASE SETUP & HELPERS ---
+DB_NAME = 'bot_users.db'
+
+def init_db():
+    """Initializes the SQLite database and creates tables if they don't exist."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            joined_at TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS balances (
+            user_id INTEGER PRIMARY KEY,
+            balance REAL DEFAULT 0.0
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def save_user(user_id, username=None):
+    """Saves a user to SQLite database permanently."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    join_date = datetime.now().strftime("%m-%d-%Y")
+    cursor.execute('''
+        INSERT OR IGNORE INTO users (user_id, username, joined_at)
+        VALUES (?, ?, ?)
+    ''', (user_id, username, join_date))
+    conn.commit()
+    conn.close()
+
+def get_all_user_ids():
+    """Fetches all stored user IDs from the SQLite database."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM users")
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
+
+def get_user_ids_by_filter(filter_type="all"):
+    """Fetches user IDs based on timeframe (all, today)."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    today_str = datetime.now().strftime("%m-%d-%Y")
+    
+    if filter_type == "today":
+        cursor.execute("SELECT user_id FROM users WHERE joined_at = ?", (today_str,))
+    else:
+        cursor.execute("SELECT user_id FROM users")
+        
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
+
+def get_user_count():
+    """Returns total unique user count."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM users")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+def is_user_exists(user_id):
+    """Checks if user exists in database."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
+
+def get_user_join_date(user_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT joined_at FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row and row[0] else datetime.now().strftime("%m-%d-%Y")
+
+def get_user_balance(user_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT balance FROM balances WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else 0.0
+
+def set_user_balance(user_id, amount):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO balances (user_id, balance) VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET balance = ?
+    ''', (user_id, amount, amount))
+    conn.commit()
+    conn.close()
+
+# Initialize Database immediately
+init_db()
+
 # --- GLOBAL SYSTEM STATES ---
 BOT_ACTIVE = True
-USER_DATABASE = set()
 ORDER_COUNTER = 928172
 INVENTORY_STOCK = {
     "default": 25,
@@ -39,10 +146,6 @@ INVENTORY_STOCK = {
 PAYMENT_RECORDS = set()
 ACTIVE_ORDERS = {}
 BROADCAST_STATE = set()
-
-# In-memory storage for user join dates & balances
-USER_JOIN_DATES = {}
-USER_BALANCES = {}
 
 # --- HELPER FOR CRYPTO AMOUNTS ---
 def calculate_crypto_amount(gbp_val, coin):
@@ -250,47 +353,23 @@ categories = EMAIL_SUBCATEGORIES
 
 COUNTRY_BANKS = {
     "uk": [
-        ("HSBC UK", "hsbc_uk"),
-        ("Barclays", "barclays"),
-        ("Lloyds Bank", "lloyds_bank"),
-        ("NatWest", "natwest"),
-        ("Santander UK", "santander_uk"),
-        ("Halifax", "halifax"),
-        ("Nationwide", "nationwide"),
-        ("Royal Bank of Scotland", "royal_bank_of_scotland"),
-        ("TSB", "tsb"),
-        ("Metro Bank", "metro_bank"),
-        ("Monzo", "monzo"),
-        ("Starling Bank", "starling_bank"),
-        ("Virgin Money", "virgin_money"),
-        ("Co-operative Bank", "co_operative_bank"),
-        ("Bank of Scotland", "bank_of_scotland"),
-        ("First Direct", "first_direct"),
-        ("Chase UK", "chase_uk"),
-        ("Kroo", "kroo"),
-        ("Revolut", "revolut"),
-        ("Wise", "wise")
+        ("HSBC UK", "hsbc_uk"), ("Barclays", "barclays"), ("Lloyds Bank", "lloyds_bank"),
+        ("NatWest", "natwest"), ("Santander UK", "santander_uk"), ("Halifax", "halifax"),
+        ("Nationwide", "nationwide"), ("Royal Bank of Scotland", "royal_bank_of_scotland"),
+        ("TSB", "tsb"), ("Metro Bank", "metro_bank"), ("Monzo", "monzo"),
+        ("Starling Bank", "starling_bank"), ("Virgin Money", "virgin_money"),
+        ("Co-operative Bank", "co_operative_bank"), ("Bank of Scotland", "bank_of_scotland"),
+        ("First Direct", "first_direct"), ("Chase UK", "chase_uk"), ("Kroo", "kroo"),
+        ("Revolut", "revolut"), ("Wise", "wise")
     ],
     "usa": [
-        ("JPMorgan Chase", "jpmorgan_chase"),
-        ("Bank of America", "bank_of_america"),
-        ("Wells Fargo", "wells_fargo"),
-        ("Citibank", "citibank"),
-        ("U.S. Bank", "us_bank"),
-        ("PNC Bank", "pnc_bank"),
-        ("Truist Bank", "truist_bank"),
-        ("Capital One", "capital_one"),
-        ("TD Bank", "td_bank"),
-        ("BMO Bank", "bmo_bank"),
-        ("Citizens Bank", "citizens_bank"),
-        ("Fifth Third Bank", "fifth_third_bank"),
-        ("KeyBank", "keybank"),
-        ("Huntington Bank", "huntington_bank"),
-        ("Regions Bank", "regions_bank"),
-        ("M&T Bank", "mt_bank"),
-        ("Ally Bank", "ally_bank"),
-        ("Discover Bank", "discover_bank"),
-        ("Navy Federal Credit Union", "navy_federal_credit_union"),
+        ("JPMorgan Chase", "jpmorgan_chase"), ("Bank of America", "bank_of_america"),
+        ("Wells Fargo", "wells_fargo"), ("Citibank", "citibank"), ("U.S. Bank", "us_bank"),
+        ("PNC Bank", "pnc_bank"), ("Truist Bank", "truist_bank"), ("Capital One", "capital_one"),
+        ("TD Bank", "td_bank"), ("BMO Bank", "bmo_bank"), ("Citizens Bank", "citizens_bank"),
+        ("Fifth Third Bank", "fifth_third_bank"), ("KeyBank", "keybank"), ("Huntington Bank", "huntington_bank"),
+        ("Regions Bank", "regions_bank"), ("M&T Bank", "mt_bank"), ("Ally Bank", "ally_bank"),
+        ("Discover Bank", "discover_bank"), ("Navy Federal Credit Union", "navy_federal_credit_union"),
         ("Goldman Sachs Bank USA", "goldman_sachs_bank_usa")
     ],
     "australia": [
@@ -328,7 +407,7 @@ def admin_panel_keyboard():
     keyboard = [
         [InlineKeyboardButton("📊 Dashboard", callback_data="adm_dash"), InlineKeyboardButton("📦 Orders", callback_data="adm_orders")],
         [InlineKeyboardButton("👥 Users", callback_data="adm_users"), InlineKeyboardButton("💰 Revenue", callback_data="adm_revenue")],
-        [InlineKeyboardButton("📢 Broadcast", callback_data="adm_bc")],
+        [InlineKeyboardButton("📢 Broadcast (All Users)", callback_data="adm_bc"), InlineKeyboardButton("📢 Broadcast (Today)", callback_data="adm_bc_today")],
         [InlineKeyboardButton("🟢 Start Bot", callback_data="adm_start"), InlineKeyboardButton("🔴 Stop Bot", callback_data="adm_stop")],
         [InlineKeyboardButton("⬅️ Back", callback_data="main_menu")]
     ]
@@ -376,14 +455,8 @@ def sms_gender_keyboard(back_target):
 
 def sms_age_ranges_keyboard(gender, back_target):
     age_ranges = [
-        ("18–24", "18_24"),
-        ("25–34", "25_34"),
-        ("35–44", "35_44"),
-        ("45–54", "45_54"),
-        ("55–64", "55_64"),
-        ("65–74", "65_74"),
-        ("75–84", "75_84"),
-        ("85–94", "85_94")
+        ("18–24", "18_24"), ("25–34", "25_34"), ("35–44", "35_44"), ("45–54", "45_54"),
+        ("55–64", "55_64"), ("65–74", "65_74"), ("75–84", "75_84"), ("85–94", "85_94")
     ]
     keyboard = []
     for i in range(0, len(age_ranges), 2):
@@ -507,9 +580,8 @@ def topup_keyboard(back_target):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if user:
-        USER_DATABASE.add(user.id)
-        if user.id not in USER_JOIN_DATES:
-            USER_JOIN_DATES[user.id] = datetime.now().strftime("%m-%d-%Y")
+        username = user.username or "NoUsername"
+        save_user(user.id, username)
 
     # Start / Stop Check
     if not BOT_ACTIVE and user and user.id != ADMIN_TELEGRAM_ID:
@@ -544,9 +616,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
 
     if user:
-        USER_DATABASE.add(user.id)
-        if user.id not in USER_JOIN_DATES:
-            USER_JOIN_DATES[user.id] = datetime.now().strftime("%m-%d-%Y")
+        username = user.username or "NoUsername"
+        save_user(user.id, username)
 
     # Start / Stop Check
     global BOT_ACTIVE, ORDER_COUNTER
@@ -587,7 +658,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             dash_text = (
                 f"📊 **Dashboard Statistics**\n\n"
                 f"• Status: {'🟢 Active' if BOT_ACTIVE else '🔴 Stopped'}\n"
-                f"• Registered Users: {len(USER_DATABASE)}\n"
+                f"• Registered Users: {get_user_count()}\n"
                 f"• Stock Available: {INVENTORY_STOCK.get('default', 25)}\n"
                 f"• Total Orders: {ORDER_COUNTER - 928172}"
             )
@@ -600,7 +671,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "adm_users":
         if user.id == ADMIN_TELEGRAM_ID:
-            await query.edit_message_text(f"👥 **Total Unique Users:** {len(USER_DATABASE)}", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
+            await query.edit_message_text(f"👥 **Total Unique Users:** {get_user_count()}", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
 
     elif data == "adm_revenue":
         if user.id == ADMIN_TELEGRAM_ID:
@@ -610,7 +681,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "adm_bc":
         if user.id == ADMIN_TELEGRAM_ID:
             BROADCAST_STATE.add(user.id)
-            await query.edit_message_text("📢 **Broadcast Mode:** Please send the message you want to broadcast to all users.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
+            context.user_data['broadcast_filter'] = 'all'
+            await query.edit_message_text("📢 **Broadcast Mode (All Users - New & Old):** Please send the message you want to broadcast.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
+
+    elif data == "adm_bc_today":
+        if user.id == ADMIN_TELEGRAM_ID:
+            BROADCAST_STATE.add(user.id)
+            context.user_data['broadcast_filter'] = 'today'
+            await query.edit_message_text("📢 **Broadcast Mode (Today's Users):** Please send the message you want to broadcast.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
 
     # --- SMART STOCK & ORDER CREATION TRIGGER ---
     elif data.startswith(("price_", "ledger_price_", "sms_price_", "bank_price_", "email_price_")):
@@ -633,25 +711,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{user_identifier} created order #{order_id} for {product_name} (Global) - £50+"
         )
 
-        tier_parts = data.split("_")
-        back_target = "main_menu"
-        if product_name == "price":
-            country = context.user_data.get('selected_crypto_country', 'uk')
-            back_target = f"crypto_country_{country}"
-        elif product_name == "ledger":
-            device_code = context.user_data.get('selected_ledger_device', 'ledger_nano_x')
-            back_target = f"ledger_device_{device_code}"
-        elif product_name == "sms":
-            gender = context.user_data.get('selected_gender', 'female')
-            age_range = context.user_data.get('selected_age_range', '18_24')
-            back_target = f"sms_age_{gender}_{age_range}"
-        elif product_name == "bank":
-            bank_name = context.user_data.get('selected_bank_name', 'bank')
-            back_target = f"bank_name_{bank_name}"
-        elif product_name == "email":
-            subcat_code = context.user_data.get('selected_email_subcat', 'ecommerce_owners')
-            back_target = f"email_sub_{subcat_code}"
-
         selected_crypto = context.user_data.get('selected_crypto', 'BTC')
         wallet_addr = WALLET_ADDRESSES.get(selected_crypto.lower(), WALLET_ADDRESSES['btc'])
         crypto_amt = calculate_crypto_amount(50, selected_crypto)
@@ -667,6 +726,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "!! By sending, you agree to these terms\n"
             f"!! DO NOT send in £ — send ONLY in {selected_crypto}"
         )
+        back_target = "main_menu"
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard(back_target))
 
     elif data == "verify_payment":
@@ -800,8 +860,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --- WALLET & TOP UP FLOW ---
     elif data == "wallet":
         user_id_val = query.from_user.id
-        join_date = USER_JOIN_DATES.get(user_id_val, datetime.now().strftime("%m-%d-%Y"))
-        current_bal = USER_BALANCES.get(user_id_val, 0.0)
+        join_date = get_user_join_date(user_id_val)
+        current_bal = get_user_balance(user_id_val)
         await send_log_to_group(context.bot, f"{user_identifier} opened the wallet")
         text = (
             "==================================\n"
@@ -893,11 +953,11 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Invalid format. Use numbers for user_id and amount.")
         return
 
-    if target_user_id not in USER_DATABASE:
-        USER_DATABASE.add(target_user_id)
+    if not is_user_exists(target_user_id):
+        save_user(target_user_id)
 
-    current_bal = USER_BALANCES.get(target_user_id, 0.0) + amount
-    USER_BALANCES[target_user_id] = current_bal
+    current_bal = get_user_balance(target_user_id) + amount
+    set_user_balance(target_user_id, current_bal)
 
     success_msg = (
         "✅ Payment confirmed. Your account has been funded.\n\n"
@@ -920,7 +980,7 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"⚠️ Credited user balance, but failed to send message/file to user: {e}")
 
-# --- NEW ADMIN COMMAND: /userbal ---
+# --- ADMIN COMMAND: /userbal ---
 async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -949,9 +1009,9 @@ async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Amount cannot be negative.")
         return
 
-    USER_BALANCES[target_user_id] = amount
-    if target_user_id not in USER_DATABASE:
-        USER_DATABASE.add(target_user_id)
+    set_user_balance(target_user_id, amount)
+    if not is_user_exists(target_user_id):
+        save_user(target_user_id)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     audit_log_text = (
@@ -977,7 +1037,7 @@ async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(admin_confirmation)
 
-# --- NEW ADMIN COMMAND: /senduser ---
+# --- ADMIN COMMAND: /senduser ---
 async def senduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -1003,7 +1063,7 @@ async def senduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send message to user {target_user_id}. Error: {e}")
 
-# --- NEW ADMIN COMMAND: /sendalluser ---
+# --- ADMIN COMMAND: /sendalluser ---
 async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -1016,10 +1076,11 @@ async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     message_text = " ".join(args)
+    all_users = get_all_user_ids()
     success_count = 0
     fail_count = 0
 
-    for target_id in USER_DATABASE:
+    for target_id in all_users:
         try:
             await context.bot.send_message(
                 chat_id=target_id, 
@@ -1027,6 +1088,7 @@ async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode="Markdown"
             )
             success_count += 1
+            time.sleep(0.04) # Rate limit protection to prevent Telegram API blocks
         except Exception:
             fail_count += 1
 
@@ -1034,6 +1096,41 @@ async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"✅ Broadcast complete.\n\n"
         f"• Successfully sent: {success_count}\n"
         f"• Failed (blocked/inactive): {fail_count}"
+    )
+
+# --- ADMIN COMMAND: /sendtoday ---
+async def sendtoday_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not user or user.id != ADMIN_TELEGRAM_ID:
+        await update.message.reply_text("❌ Unauthorized access.")
+        return
+
+    args = context.args
+    if not args:
+        await update.message.reply_text("❌ Usage: /sendtoday {your message here}")
+        return
+
+    message_text = " ".join(args)
+    today_users = get_user_ids_by_filter("today")
+    success_count = 0
+    fail_count = 0
+
+    for target_id in today_users:
+        try:
+            await context.bot.send_message(
+                chat_id=target_id, 
+                text=f"📢 **Announcement:**\n\n{message_text}", 
+                parse_mode="Markdown"
+            )
+            success_count += 1
+            time.sleep(0.04)
+        except Exception:
+            fail_count += 1
+
+    await update.message.reply_text(
+        f"✅ Broadcast to today's new users complete.\n\n"
+        f"• Successfully sent: {success_count}\n"
+        f"• Failed: {fail_count}"
     )
 
 # --- BROADCAST SYSTEM & PASSWORD AUTH HANDLER ---
@@ -1051,14 +1148,20 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if user.id == ADMIN_TELEGRAM_ID and user.id in BROADCAST_STATE:
         BROADCAST_STATE.remove(user.id)
+        filter_type = context.user_data.get('broadcast_filter', 'all')
+        target_users = get_user_ids_by_filter(filter_type)
+        
         success_count = 0
-        for target_id in USER_DATABASE:
+        for target_id in target_users:
             try:
                 await context.bot.send_message(chat_id=target_id, text=f"📢 **Announcement:**\n\n{text}", parse_mode="Markdown")
                 success_count += 1
+                time.sleep(0.04)
             except Exception:
                 pass
-        await update.message.reply_text(f"✅ Broadcast successfully sent to {success_count} users.")
+        
+        target_label = "today's users" if filter_type == "today" else "all users (new & old)"
+        await update.message.reply_text(f"✅ Broadcast successfully sent to {success_count} ({target_label}).")
         return
 
 def main():
@@ -1072,6 +1175,7 @@ def main():
     application.add_handler(CommandHandler("userbal", userbal_command))
     application.add_handler(CommandHandler("senduser", senduser_command))
     application.add_handler(CommandHandler("sendalluser", sendalluser_command))
+    application.add_handler(CommandHandler("sendtoday", sendtoday_command))
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_message_handler))
     application.run_polling()
