@@ -10,6 +10,7 @@ from telegram.ext import (
     filters,
 )
 from datetime import datetime
+import hashlib
 
 # --- CRASH-PROOF & ZERO TERMINAL LOGS CONFIGURATION ---
 logging.basicConfig(level=logging.CRITICAL)
@@ -21,17 +22,10 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 # --- ADMIN CONFIGURATION ---
 ADMIN_TELEGRAM_ID = 7280810198
 ADMIN_GROUP_ID = -1003907566721
+COMMAND_PASSWORD = "myprince"
 
-# Secure Password Handling from Environment Variables
-COMMAND_PASSWORD = os.getenv("COMMAND_PASSWORD", "myprince")
-ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH")
-
-def verify_password(provided_password: str) -> bool:
-    if ADMIN_PASSWORD_HASH:
-        import hashlib
-        hashed = hashlib.sha256(provided_password.encode()).hexdigest()
-        return hashed == ADMIN_PASSWORD_HASH
-    return provided_password == COMMAND_PASSWORD
+# Secure hash for the admin command password (SHA-256 of "myprince")
+COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
 
 # --- GLOBAL SYSTEM STATES ---
 BOT_ACTIVE = True
@@ -241,17 +235,53 @@ EMAIL_SUBCATEGORIES = {
 categories = EMAIL_SUBCATEGORIES
 
 COUNTRY_BANKS = {
+    "uk": [
+        ("HSBC UK", "hsbc_uk"),
+        ("Barclays", "barclays"),
+        ("Lloyds Bank", "lloyds_bank"),
+        ("NatWest", "natwest"),
+        ("Santander UK", "santander_uk"),
+        ("Halifax", "halifax"),
+        ("Nationwide", "nationwide"),
+        ("Royal Bank of Scotland", "royal_bank_of_scotland"),
+        ("TSB", "tsb"),
+        ("Metro Bank", "metro_bank"),
+        ("Monzo", "monzo"),
+        ("Starling Bank", "starling_bank"),
+        ("Virgin Money", "virgin_money"),
+        ("Co-operative Bank", "co_operative_bank"),
+        ("Bank of Scotland", "bank_of_scotland"),
+        ("First Direct", "first_direct"),
+        ("Chase UK", "chase_uk"),
+        ("Kroo", "kroo"),
+        ("Revolut", "revolut"),
+        ("Wise", "wise")
+    ],
+    "usa": [
+        ("JPMorgan Chase", "jpmorgan_chase"),
+        ("Bank of America", "bank_of_america"),
+        ("Wells Fargo", "wells_fargo"),
+        ("Citibank", "citibank"),
+        ("U.S. Bank", "us_bank"),
+        ("PNC Bank", "pnc_bank"),
+        ("Truist Bank", "truist_bank"),
+        ("Capital One", "capital_one"),
+        ("TD Bank", "td_bank"),
+        ("BMO Bank", "bmo_bank"),
+        ("Citizens Bank", "citizens_bank"),
+        ("Fifth Third Bank", "fifth_third_bank"),
+        ("KeyBank", "keybank"),
+        ("Huntington Bank", "huntington_bank"),
+        ("Regions Bank", "regions_bank"),
+        ("M&T Bank", "mt_bank"),
+        ("Ally Bank", "ally_bank"),
+        ("Discover Bank", "discover_bank"),
+        ("Navy Federal Credit Union", "navy_federal_credit_union"),
+        ("Goldman Sachs Bank USA", "goldman_sachs_bank_usa")
+    ],
     "australia": [
         ("Commonwealth Bank", "commonwealth_bank"), ("Westpac Bank", "westpac_bank"), ("ANZ Bank", "anz_bank"),
         ("National Australia Bank", "national_australia_bank"), ("Macquarie Bank", "macquarie_bank"), ("Bendigo Bank", "bendigo_bank")
-    ],
-    "uk": [
-        ("HSBC", "hsbc"), ("Barclays", "barclays"), ("Lloyds Bank", "lloyds_bank"), ("NatWest", "natwest"),
-        ("Santander UK", "santander_uk"), ("TSB Bank", "tsb_bank"), ("Starling Bank", "starling_bank"), ("Monzo Bank", "monzo_bank")
-    ],
-    "usa": [
-        ("JPMorgan Chase", "jpmorgan_chase"), ("Bank of America", "bank_of_america"), ("Wells Fargo", "wells_fargo"),
-        ("Citibank", "citibank"), ("Capital One", "capital_one"), ("Ally Bank", "ally_bank")
     ],
     "default": [
         ("National Bank", "national_bank"), ("Commercial Bank", "commercial_bank"), ("Retail Bank", "retail_bank")
@@ -553,7 +583,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             device_code = context.user_data.get('selected_ledger_device', 'ledger_nano_x')
             back_target = f"ledger_device_{device_code}"
         elif product_name == "sms":
-            gender = tier_parts[1] if len(tier_parts) > 1 else "female"
+            gender = tier_parts[2] if len(tier_parts) > 2 else "female"
             back_target = f"sms_gender_{gender}"
         elif product_name == "bank":
             bank_name = context.user_data.get('selected_bank_name', 'bank')
@@ -691,8 +721,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text(text, reply_markup=banks_keyboard(country_code, "category_bank"))
 
     elif data.startswith("bank_name_"):
-        bank_code = data.split("_")[2]
-        context.user_data['selected_bank_name'] = bank_code
+        bank_code = data.split("_")[2:]
+        bank_code_str = "_".join(bank_code)
+        context.user_data['selected_bank_name'] = bank_code_str
         text = "Please select the amount of bank leads you want to purchase:"
         country = context.user_data.get('selected_bank_country', 'uk')
         await query.message.edit_text(text, reply_markup=bank_pricing_tiers_keyboard(f"bank_country_{country}"))
@@ -793,7 +824,6 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Invalid format. Use numbers for user_id and amount.")
         return
 
-    # Validate target user exists in database
     if target_user_id not in USER_DATABASE:
         USER_DATABASE.add(target_user_id)
 
@@ -821,8 +851,7 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"⚠️ Credited user balance, but failed to send message/file to user: {e}")
 
-# --- NEW ADMIN COMMANDS: /userbal & /senduser ---
-
+# --- NEW ADMIN COMMAND: /userbal ---
 async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -839,46 +868,47 @@ async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount = float(args[1])
         password_input = args[2]
     except ValueError:
-        await update.message.reply_text("❌ Invalid format. User ID and amount must be numbers.")
+        await update.message.reply_text("❌ Invalid format. User ID and amount must be numeric.")
+        return
+
+    input_hash = hashlib.sha256(password_input.encode()).hexdigest()
+    if input_hash != COMMAND_PASSWORD_HASH:
+        await update.message.reply_text("❌ Incorrect password.")
         return
 
     if amount < 0:
         await update.message.reply_text("❌ Amount cannot be negative.")
         return
 
-    if not verify_password(password_input):
-        await update.message.reply_text("❌ Incorrect password.")
-        return
-
+    USER_BALANCES[target_user_id] = amount
     if target_user_id not in USER_DATABASE:
         USER_DATABASE.add(target_user_id)
 
-    USER_BALANCES[target_user_id] = amount
-
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    audit_log = (
-        f"🛠 **AUDIT LOG: Balance Update**\n"
+    audit_log_text = (
+        f"📋 **Audit Log: Balance Update**\n"
         f"• Admin ID: {user.id}\n"
         f"• Target User ID: {target_user_id}\n"
-        f"• New Balance Set: £{amount}\n"
+        f"• New Balance Set: £{amount:.2f}\n"
         f"• Timestamp: {timestamp}"
     )
-    await send_log_to_group(context.bot, audit_log)
+    await send_log_to_group(context.bot, audit_log_text)
 
-    user_msg = f"✅ Balance update: £{amount} has been added to your balance."
+    user_msg = f"✅ Balance update: £{amount:g} has been added to your balance."
     try:
         await context.bot.send_message(chat_id=target_user_id, text=user_msg)
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Balance updated internally, but failed to notify user: {e}")
+        await update.message.reply_text(f"⚠️ Balance updated successfully, but failed to notify user: {e}")
         return
 
-    admin_reply = (
-        f"✅ Balance updated successfully\n\n"
+    admin_confirmation = (
+        "✅ Balance updated successfully\n\n"
         f"User ID: {target_user_id}\n"
-        f"Amount: £{amount}"
+        f"Amount: £{amount:g}"
     )
-    await update.message.reply_text(admin_reply)
+    await update.message.reply_text(admin_confirmation)
 
+# --- NEW ADMIN COMMAND: /senduser ---
 async def senduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -892,16 +922,17 @@ async def senduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         target_user_id = int(args[0])
-        message_text = " ".join(args[1:])
     except ValueError:
-        await update.message.reply_text("❌ Invalid format. User ID must be a number.")
+        await update.message.reply_text("❌ Invalid User ID. Must be a numeric Telegram ID.")
         return
+
+    message_text = " ".join(args[1:])
 
     try:
         await context.bot.send_message(chat_id=target_user_id, text=message_text)
         await update.message.reply_text("✅ Message sent successfully.")
     except Exception as e:
-        await update.message.reply_text(f"❌ Failed to send message. Make sure the user has started the bot. Error: {e}")
+        await update.message.reply_text(f"❌ Failed to send message to user {target_user_id}. Error: {e}")
 
 # --- BROADCAST SYSTEM & PASSWORD AUTH HANDLER ---
 async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -911,7 +942,8 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     if not user:
         return
 
-    if verify_password(text) and user.id == ADMIN_TELEGRAM_ID:
+    input_hash = hashlib.sha256(text.encode()).hexdigest()
+    if input_hash == COMMAND_PASSWORD_HASH and user.id == ADMIN_TELEGRAM_ID:
         await update.message.reply_text("🔓 Password accepted. Admin Access Granted.")
         return
 
@@ -943,5 +975,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
