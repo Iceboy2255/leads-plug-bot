@@ -360,7 +360,7 @@ COUNTRY_BANKS = {
         ("Starling Bank", "starling_bank"), ("Virgin Money", "virgin_money"),
         ("Co-operative Bank", "co_operative_bank"), ("Bank of Scotland", "bank_of_scotland"),
         ("First Direct", "first_direct"), ("Chase UK", "chase_uk"), ("Kroo", "kroo"),
-        ("Revolut", "revolut"), ("Wise", "wise")
+        ("Revolut", "revolut"), ("Wise", "wise"), ("BBVA", "bbva"), ("Zopa Bank Ltd.", "zopa_bank_ltd")
     ],
     "usa": [
         ("JPMorgan Chase", "jpmorgan_chase"), ("Bank of America", "bank_of_america"),
@@ -1182,5 +1182,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
