@@ -929,7 +929,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• Email Blast Services available\n"
             "• Crypto & Bank SID (No Spam)\n\n"
             "📞 **Support:**\n\n"
-            "Official Bot Support: @Leadsplugv3"
+            "Official Bot Support: @Leadsplug2"
         )
         keyboard = [[InlineKeyboardButton("Back", callback_data="main_menu")]]
         await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
