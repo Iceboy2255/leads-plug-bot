@@ -1,3 +1,4 @@
+
 import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -472,6 +473,18 @@ def bank_pricing_tiers_keyboard(back_target):
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
     return InlineKeyboardMarkup(keyboard)
 
+def bank_age_ranges_keyboard(back_target):
+    age_ranges = [
+        ("80–89", "80_89"),
+        ("70–79", "70_79"),
+        ("60–69", "60_69"),
+        ("50–59", "50_59"),
+        ("40–50", "40_50")
+    ]
+    keyboard = [[InlineKeyboardButton(label, callback_data=f"bank_age_{val}")] for label, val in age_ranges]
+    keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
+    return InlineKeyboardMarkup(keyboard)
+
 def email_pricing_tiers_keyboard(back_target):
     keyboard = [[InlineKeyboardButton(label, callback_data=f"email_price_{val}")] for label, val in EMAIL_PRICING_TIERS]
     keyboard.append([InlineKeyboardButton("Back", callback_data=back_target)])
@@ -842,7 +855,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "Please select the amount of leads you want to purchase:"
         await query.message.edit_text(text, reply_markup=sms_pricing_tiers_keyboard(gender, age_range, f"sms_gender_{gender}"))
 
-    # --- BANK LEADS FLOW ---
+    # --- BANK LEADS FLOW (UPDATED) ---
     elif data.startswith("bank_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_bank_country'] = country_code
@@ -853,9 +866,17 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bank_code = data.split("_")[2:]
         bank_code_str = "_".join(bank_code)
         context.user_data['selected_bank_name'] = bank_code_str
-        text = "Please select the amount of bank leads you want to purchase:"
+        text = "Filter Ages:"
         country = context.user_data.get('selected_bank_country', 'uk')
-        await query.message.edit_text(text, reply_markup=bank_pricing_tiers_keyboard(f"bank_country_{country}"))
+        await query.message.edit_text(text, reply_markup=bank_age_ranges_keyboard(f"bank_name_{bank_code_str}"))
+
+    elif data.startswith("bank_age_"):
+        parts = data.split("_")
+        age_range = f"{parts[2]}–{parts[3]}"
+        context.user_data['selected_bank_age'] = age_range
+        text = "Please select the amount of bank leads you want to purchase:"
+        bank_name = context.user_data.get('selected_bank_name', 'hsbc_uk')
+        await query.message.edit_text(text, reply_markup=bank_pricing_tiers_keyboard(f"bank_name_{bank_name}"))
 
     # --- WALLET & TOP UP FLOW ---
     elif data == "wallet":
@@ -1182,6 +1203,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
