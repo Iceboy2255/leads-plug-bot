@@ -268,10 +268,10 @@ CRYPTO_EXCHANGES = [
 ]
 
 PAYMENT_WALLETS = [
-    ("BTC", "btc", "bc1q6cyn934d3vlmgyghr6znnqyl3j4hluk883h70a"),
-    ("ETH", "eth", "0x44ceA102871A7270785585909a4eBe13A157D614"),
-    ("USDT", "usdt", "TVYa8uBeMZem8MwePaVii5PjEydrK3e8it"),
-    ("LTC", "ltc", "LgHLihB2f48nh13F7Byu8yiEAVRhuBMEXL")
+    ("BTC", "btc", "bc1qd9kg30tk8kuxa7qw0k8mh90zdqpjgpwuj3fr4d"),
+    ("ETH", "eth", "0xC9D3D71439D38CD0935b1D7E9E0390b8591Dce42"),
+    ("USDT", "usdt", "TRghCcbfWXfmXViqdcq7WTZ82yu44MU44U"),
+    ("LTC", "ltc", "ltc1qtt2pt3x4ujafld3knh45f78g7yxf20u8tflu25")
 ]
 
 WALLET_ADDRESSES = {code: addr for _, code, addr in PAYMENT_WALLETS}
