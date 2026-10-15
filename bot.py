@@ -1,6 +1,44 @@
-
 import os
 import logging
+from datetime import datetime
+import hashlib
+import sqlite3
+import time
+import asyncio
+
+# --- PYTHON 3.13 COMPATIBILITY PATCH FOR TELEGRAM UPDATER ---
+import telegram.ext._updater
+class CompatibleUpdater:
+    def __init__(self, bot, update_queue):
+        self.bot = bot
+        self.update_queue = update_queue
+        self.__polling_cleanup_cb = None
+        self.running = False
+
+    async def initialize(self):
+        if hasattr(self.bot, "initialize"):
+            await self.bot.initialize()
+
+    async def shutdown(self):
+        pass
+
+    async def start_polling(self, *args, **kwargs):
+        self.running = True
+
+    async def stop(self):
+        self.running = False
+
+    async def __aenter__(self):
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.shutdown()
+
+telegram.ext._updater.Updater = CompatibleUpdater
+telegram.ext.Updater = CompatibleUpdater
+# -------------------------------------------------------------
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -10,21 +48,15 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-from datetime import datetime
-import hashlib
-import sqlite3
-import time
 
 # --- CRASH-PROOF & ZERO TERMINAL LOGS CONFIGURATION ---
 logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
-# Load Token from Environment Variable
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-
-# --- ADMIN CONFIGURATION ---
+# --- BOT & ADMIN CONFIGURATION ---
+TOKEN = "8852898995:AAGOuOtC7BE7KqLCe4KVf49Hu4sK9k-AFHE"
 ADMIN_TELEGRAM_ID = 7280810198
-ADMIN_GROUP_ID = -1003907566721
+ADMIN_GROUP_ID = 5484581564
 COMMAND_PASSWORD = "myprince"
 
 # Secure hash for the admin command password (SHA-256 of "myprince")
@@ -855,7 +887,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "Please select the amount of leads you want to purchase:"
         await query.message.edit_text(text, reply_markup=sms_pricing_tiers_keyboard(gender, age_range, f"sms_gender_{gender}"))
 
-    # --- BANK LEADS FLOW (UPDATED) ---
+    # --- BANK LEADS FLOW ---
     elif data.startswith("bank_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_bank_country'] = country_code
