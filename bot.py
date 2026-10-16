@@ -55,10 +55,10 @@ logger = logging.getLogger(__name__)
 
 # --- SECURE BOT & ADMIN CONFIGURATION ---
 # TOKEN is pulled securely from Environment Variables to prevent GitHub secret exposure alerts.
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+# --- SECURE BOT & ADMIN CONFIGURATION ---
+TOKEN = "8852898995:AAGOuOtC7BE7KqLCe4KVf49Hu4sK9k-AFHE"
 ADMIN_TELEGRAM_ID = 7280810198
-ADMIN_GROUP_ID = -1004496804223  # Updated Console / Group Chat ID
-COMMAND_PASSWORD = "myprince"
+ADMIN_GROUP_ID = -1004496804223  # Console / Group Chat ID
 
 # Secure hash for the admin command password (SHA-256 of "myprince")
 COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
