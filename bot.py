@@ -54,11 +54,10 @@ logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 # --- SECURE BOT & ADMIN CONFIGURATION ---
-# TOKEN is pulled securely from Environment Variables to prevent GitHub secret exposure alerts.
-# --- SECURE BOT & ADMIN CONFIGURATION ---
 TOKEN = "8852898995:AAGOuOtC7BE7KqLCe4KVf49Hu4sK9k-AFHE"
 ADMIN_TELEGRAM_ID = 7280810198
 ADMIN_GROUP_ID = -1004496804223  # Console / Group Chat ID
+COMMAND_PASSWORD = "myprince"
 
 # Secure hash for the admin command password (SHA-256 of "myprince")
 COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
@@ -298,7 +297,7 @@ WALLET_ADDRESSES = {code: addr for _, code, addr in PAYMENT_WALLETS}
 PRICING_TIERS = [
     ("1k - £200", "1k_200"), ("2k - £380", "2k_380"), ("3k - £540", "3k_540"),
     ("4k - £680", "4k_680"), ("5k - £800", "5k_800"), ("10k - £1500", "10k_1500"),
-    ("15k - £2100", "15k_2100"), ("20k - £2600", "20k_2600"), ("25k - £3000", "25k_3000")
+    ("15k - £2100", "15k_2100"), ("20k - £2600", "26k_2600"), ("25k - £3000", "25k_3000")
 ]
 
 SMS_FEMALE_PRICING_TIERS = [
@@ -1222,3 +1221,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
