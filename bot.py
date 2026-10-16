@@ -1206,7 +1206,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def main():
     if not TOKEN:
-        raise ValueError("Environment variable TELEGRAM_BOT_TOKEN is missing!")
+        return
 
     application = Application.builder().token(TOKEN).build()
 
