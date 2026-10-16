@@ -53,10 +53,11 @@ from telegram.ext import (
 logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
-# --- BOT & ADMIN CONFIGURATION ---
-TOKEN = "8852898995:AAGOuOtC7BE7KqLCe4KVf49Hu4sK9k-AFHE"
+# --- SECURE BOT & ADMIN CONFIGURATION ---
+# TOKEN is pulled securely from Environment Variables to prevent GitHub secret exposure alerts.
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ADMIN_TELEGRAM_ID = 7280810198
-ADMIN_GROUP_ID = 5484581564
+ADMIN_GROUP_ID = -1004496804223  # Updated Console / Group Chat ID
 COMMAND_PASSWORD = "myprince"
 
 # Secure hash for the admin command password (SHA-256 of "myprince")
@@ -198,20 +199,6 @@ def calculate_crypto_amount(gbp_val, coin):
     else:
         return f"{val:.2f}"
 
-def get_small_unit(coin, amount_str):
-    try:
-        val = float(amount_str)
-        if coin == "BTC":
-            return f"({int(val * 100000000)} sats)"
-        elif coin == "ETH":
-            return f"({int(val * 1000000000000000000)} wei)"
-        elif coin == "LTC":
-            return f"({int(val * 100000000)} litoshis)"
-        else:
-            return f"({int(val * 100)} cents)"
-    except Exception:
-        return "(units)"
-
 # --- HUMAN CHAT-STYLE LOG HELPER ---
 async def send_log_to_group(bot, log_text: str):
     try:
@@ -222,7 +209,7 @@ async def send_log_to_group(bot, log_text: str):
     except Exception:
         pass
 
-# --- COMPREHENSIVE COUNTRY LIST (Two-Column Grid Layout) ---
+# --- COMPREHENSIVE COUNTRY LIST ---
 ALL_COUNTRIES = [
     ("AUSTRALIA", "australia"), ("AUSTRIA", "austria"),
     ("BELGIUM", "belgium"), ("BRAZIL", "brazil"),
@@ -1219,7 +1206,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def main():
     if not TOKEN:
-        return
+        raise ValueError("Environment variable TELEGRAM_BOT_TOKEN is missing!")
 
     application = Application.builder().token(TOKEN).build()
 
@@ -1235,5 +1222,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
