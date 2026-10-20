@@ -413,9 +413,6 @@ def main_menu_keyboard(user_id=None):
             InlineKeyboardButton("Bank Leads", callback_data="category_bank"),
             InlineKeyboardButton("Wallet", callback_data="wallet"),
             InlineKeyboardButton("FAQ", callback_data="faq")
-        ],
-        [
-            InlineKeyboardButton("Channel", url="https://t.me/Leadssplugv3")
         ]
     ]
     if user_id == ADMIN_TELEGRAM_ID:
@@ -1221,6 +1218,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
