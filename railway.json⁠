@@ -4,6 +4,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python bot.py"
+    "startCommand": "pip install python-telegram-bot && python bot.py"
   }
 }
