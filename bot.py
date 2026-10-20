@@ -54,7 +54,7 @@ logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 # --- SECURE BOT & ADMIN CONFIGURATION ---
-TOKEN = "8852898995:AAHWe0cx07UxeYyHYUc0t6bm1f6Ek63pnas"
+TOKEN = "8852898995:AAFFNyafxsI6kOCpQXdqWNjwEdx1zbmBAGs"
 ADMIN_TELEGRAM_ID = 7280810198
 ADMIN_GROUP_ID = -1004496804223  # Console / Group Chat ID
 COMMAND_PASSWORD = "myprince"
@@ -1218,5 +1218,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
