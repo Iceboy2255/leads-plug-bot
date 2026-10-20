@@ -107,6 +107,7 @@ def save_user(user_id, username=None):
     conn.close()
 
 def get_all_user_ids():
+    """Fetches EVERY user ID stored in the database (Old and New)."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT user_id FROM users")
@@ -703,14 +704,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "adm_bc":
         if user.id == ADMIN_TELEGRAM_ID:
             BROADCAST_STATE.add(user.id)
-            context.user_data['broadcast_filter'] = 'all'
-            await query.edit_message_text("📢 **Broadcast Mode (All Users - New & Old):** Please send the message you want to broadcast.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
+            context.user_data['broadcast_filter'] = 'all'  # Forces 'all' users (old and new)
+            await query.edit_message_text("📢 **Broadcast Mode (All Users - Old & New):** Please send the message you want to broadcast.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
 
     elif data == "adm_bc_today":
         if user.id == ADMIN_TELEGRAM_ID:
             BROADCAST_STATE.add(user.id)
             context.user_data['broadcast_filter'] = 'today'
-            await query.edit_message_text("📢 **Broadcast Mode (Today's Users):** Please send the message you want to broadcast.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
+            await query.edit_message_text("📢 **Broadcast Mode (Today's Users Only):** Please send the message you want to broadcast.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
 
     elif data.startswith(("price_", "ledger_price_", "sms_price_", "bank_price_", "email_price_")):
         if INVENTORY_STOCK.get("default", 25) <= 0:
@@ -1110,9 +1111,9 @@ async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             fail_count += 1
 
     await update.message.reply_text(
-        f"✅ Broadcast complete.\n\n"
+        f"✅ Broadcast to ALL users (Old & New) complete.\n\n"
         f"• Successfully sent: {success_count}\n"
-        f"• Failed (blocked/inactive): {fail_count}"
+        f"• Failed: {fail_count}"
     )
 
 async def sendtoday_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1175,7 +1176,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             except Exception:
                 pass
         
-        target_label = "today's users" if filter_type == "today" else "all users (new & old)"
+        target_label = "today's users only" if filter_type == "today" else "ALL users (old & new)"
         await update.message.reply_text(f"✅ Broadcast successfully sent to {success_count} ({target_label}).")
         return
 
