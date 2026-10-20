@@ -1,4 +1,15 @@
 import os
+import sys
+import subprocess
+
+# --- AUTOMATIC DEPENDENCY INSTALLER FOR RAILWAY ---
+try:
+    import telegram
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-cache-dir", "python-telegram-bot>=20.0"])
+    import telegram
+# ---------------------------------------------------
+
 import logging
 from datetime import datetime
 import hashlib
@@ -66,7 +77,6 @@ COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
 DB_NAME = 'bot_users.db'
 
 def init_db():
-    """Initializes the SQLite database and creates tables if they don't exist."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
@@ -86,7 +96,6 @@ def init_db():
     conn.close()
 
 def save_user(user_id, username=None):
-    """Saves a user to SQLite database permanently."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     join_date = datetime.now().strftime("%m-%d-%Y")
@@ -98,7 +107,6 @@ def save_user(user_id, username=None):
     conn.close()
 
 def get_all_user_ids():
-    """Fetches all stored user IDs from the SQLite database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT user_id FROM users")
@@ -107,7 +115,6 @@ def get_all_user_ids():
     return [row[0] for row in rows]
 
 def get_user_ids_by_filter(filter_type="all"):
-    """Fetches user IDs based on timeframe (all, today)."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     today_str = datetime.now().strftime("%m-%d-%Y")
@@ -122,7 +129,6 @@ def get_user_ids_by_filter(filter_type="all"):
     return [row[0] for row in rows]
 
 def get_user_count():
-    """Returns total unique user count."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM users")
@@ -131,7 +137,6 @@ def get_user_count():
     return count
 
 def is_user_exists(user_id):
-    """Checks if user exists in database."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))
@@ -165,7 +170,6 @@ def set_user_balance(user_id, amount):
     conn.commit()
     conn.close()
 
-# Initialize Database immediately
 init_db()
 
 # --- GLOBAL SYSTEM STATES ---
@@ -180,7 +184,6 @@ PAYMENT_RECORDS = set()
 ACTIVE_ORDERS = {}
 BROADCAST_STATE = set()
 
-# --- HELPER FOR CRYPTO AMOUNTS ---
 def calculate_crypto_amount(gbp_val, coin):
     rates = {"BTC": 60000.0, "ETH": 2500.0, "LTC": 70.0, "USDT": 1.0}
     rate = rates.get(coin, 1.0)
@@ -198,7 +201,6 @@ def calculate_crypto_amount(gbp_val, coin):
     else:
         return f"{val:.2f}"
 
-# --- HUMAN CHAT-STYLE LOG HELPER ---
 async def send_log_to_group(bot, log_text: str):
     try:
         await bot.send_message(
@@ -208,7 +210,6 @@ async def send_log_to_group(bot, log_text: str):
     except Exception:
         pass
 
-# --- COMPREHENSIVE COUNTRY LIST ---
 ALL_COUNTRIES = [
     ("AUSTRALIA", "australia"), ("AUSTRIA", "austria"),
     ("BELGIUM", "belgium"), ("BRAZIL", "brazil"),
@@ -399,8 +400,6 @@ COUNTRY_BANKS = {
         ("National Bank", "national_bank"), ("Commercial Bank", "commercial_bank"), ("Retail Bank", "retail_bank")
     ]
 }
-
-# --- KEYBOARD BUILDERS ---
 
 def main_menu_keyboard(user_id=None):
     keyboard = [
@@ -603,15 +602,12 @@ def topup_keyboard(back_target):
     ]
     return InlineKeyboardMarkup(keyboard)
 
-# --- CORE HANDLERS ---
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if user:
         username = user.username or "NoUsername"
         save_user(user.id, username)
 
-    # Start / Stop Check
     if not BOT_ACTIVE and user and user.id != ADMIN_TELEGRAM_ID:
         if update.callback_query:
             await update.callback_query.answer("Bot temporarily unavailable", show_alert=True)
@@ -647,7 +643,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         username = user.username or "NoUsername"
         save_user(user.id, username)
 
-    # Start / Stop Check
     global BOT_ACTIVE, ORDER_COUNTER
     if not BOT_ACTIVE and data != "admin_panel" and not data.startswith("adm_") and user.id != ADMIN_TELEGRAM_ID:
         await query.edit_message_text("Bot temporarily unavailable")
@@ -662,7 +657,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "main_menu":
         await start(update, context)
 
-    # --- ADMIN PANEL LOGIC ---
     elif data == "admin_panel":
         if user.id != ADMIN_TELEGRAM_ID:
             await query.edit_message_text("❌ Unauthorized access.")
@@ -718,7 +712,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['broadcast_filter'] = 'today'
             await query.edit_message_text("📢 **Broadcast Mode (Today's Users):** Please send the message you want to broadcast.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
 
-    # --- SMART STOCK & ORDER CREATION TRIGGER ---
     elif data.startswith(("price_", "ledger_price_", "sms_price_", "bank_price_", "email_price_")):
         if INVENTORY_STOCK.get("default", 25) <= 0:
             await send_log_to_group(context.bot, f"{user_identifier} tried to buy fullz, but no credits")
@@ -768,7 +761,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.edit_text(waiting_text)
 
-    # --- CATEGORY SELECTION ---
     elif data.startswith("category_"):
         cat_type = data.split("_")[1]
         context.user_data['selected_category'] = cat_type
@@ -790,7 +782,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = "Please select an option:"
             await query.message.edit_text(text, reply_markup=main_menu_keyboard(user.id))
 
-    # --- CRYPTO LEADS SUB-MENU FLOW ---
     elif data.startswith("crypto_sub_exchange_page_"):
         page_num = int(data.split("_")[-1])
         text = "Please select a crypto exchange:"
@@ -812,7 +803,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "Please select the amount of leads you want to purchase:"
         await query.message.edit_text(text, reply_markup=ledger_device_pricing_keyboard(f"ledger_country_{context.user_data.get('selected_ledger_country', 'uk')}"))
 
-    # --- EMAIL LEADS FLOW ---
     elif data.startswith("email_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_email_country'] = country_code
@@ -835,7 +825,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         back_target = f"email_cat_{cat_code}"
         await query.message.edit_text(text, reply_markup=email_pricing_tiers_keyboard(back_target))
 
-    # --- CRYPTO EXCHANGE LEADS FLOW ---
     elif data.startswith("crypto_ex_"):
         exchange_code = "_".join(data.split("_")[2:])
         context.user_data['selected_exchange'] = exchange_code
@@ -848,7 +837,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "Please select the amount of leads you want to purchase:"
         await query.message.edit_text(text, reply_markup=pricing_tiers_keyboard(f"crypto_ex_{context.user_data.get('selected_exchange', 'binance')}"))
 
-    # --- AGED LEADS FLOW ---
     elif data.startswith("sms_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_country'] = country_code
@@ -870,7 +858,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "Please select the amount of leads you want to purchase:"
         await query.message.edit_text(text, reply_markup=sms_pricing_tiers_keyboard(gender, age_range, f"sms_gender_{gender}"))
 
-    # --- BANK LEADS FLOW ---
     elif data.startswith("bank_country_"):
         country_code = data.split("_")[2]
         context.user_data['selected_bank_country'] = country_code
@@ -893,7 +880,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bank_name = context.user_data.get('selected_bank_name', 'hsbc_uk')
         await query.message.edit_text(text, reply_markup=bank_pricing_tiers_keyboard(f"bank_name_{bank_name}"))
 
-    # --- WALLET & TOP UP FLOW ---
     elif data == "wallet":
         user_id_val = query.from_user.id
         join_date = get_user_join_date(user_id_val)
@@ -952,7 +938,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.message.edit_text(text, reply_markup=wallet_page_keyboard("wallet"))
 
-    # --- FAQ SECTION ---
     elif data == "faq":
         text = (
             "📌 **FAQ**\n\n"
@@ -970,7 +955,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("Back", callback_data="main_menu")]]
         await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
-# --- ADMIN MANUAL CONFIRM COMMAND ---
 async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -1016,7 +1000,6 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"⚠️ Credited user balance, but failed to send message/file to user: {e}")
 
-# --- ADMIN COMMAND: /userbal ---
 async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -1073,7 +1056,6 @@ async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(admin_confirmation)
 
-# --- ADMIN COMMAND: /senduser ---
 async def senduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -1099,7 +1081,6 @@ async def senduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send message to user {target_user_id}. Error: {e}")
 
-# --- ADMIN COMMAND: /sendalluser ---
 async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -1124,7 +1105,7 @@ async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 parse_mode="Markdown"
             )
             success_count += 1
-            time.sleep(0.04) # Rate limit protection to prevent Telegram API blocks
+            time.sleep(0.04)
         except Exception:
             fail_count += 1
 
@@ -1134,7 +1115,6 @@ async def sendalluser_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"• Failed (blocked/inactive): {fail_count}"
     )
 
-# --- ADMIN COMMAND: /sendtoday ---
 async def sendtoday_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not user or user.id != ADMIN_TELEGRAM_ID:
@@ -1169,7 +1149,6 @@ async def sendtoday_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• Failed: {fail_count}"
     )
 
-# --- BROADCAST SYSTEM & PASSWORD AUTH HANDLER ---
 async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     text = update.message.text
