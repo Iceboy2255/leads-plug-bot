@@ -73,103 +73,120 @@ COMMAND_PASSWORD = "myprince"
 # Secure hash for the admin command password (SHA-256 of "myprince")
 COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
 
-# --- DATABASE SETUP & HELPERS ---
-DB_NAME = 'bot_users.db'
+# --- PERSISTENT DATABASE SETUP & HELPERS ---
+# Detects Railway persistent volume folder /app/data if available
+if os.path.exists('/app/data'):
+    DB_NAME = '/app/data/bot_users.db'
+else:
+    DB_NAME = 'bot_users.db'
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_NAME, timeout=10)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
-            username TEXT,
-            joined_at TEXT
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS balances (
-            user_id INTEGER PRIMARY KEY,
-            balance REAL DEFAULT 0.0
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT,
+                joined_at TEXT
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS balances (
+                user_id INTEGER PRIMARY KEY,
+                balance REAL DEFAULT 0.0,
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )
+        ''')
+        conn.commit()
 
-def save_user(user_id, username=None):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+def save_user(user_id: int, username: str = None):
     join_date = datetime.now().strftime("%m-%d-%Y")
-    cursor.execute('''
-        INSERT OR IGNORE INTO users (user_id, username, joined_at)
-        VALUES (?, ?, ?)
-    ''', (user_id, username, join_date))
-    conn.commit()
-    conn.close()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT OR IGNORE INTO users (user_id, username, joined_at)
+            VALUES (?, ?, ?)
+        ''', (user_id, username, join_date))
+        cursor.execute('''
+            INSERT OR IGNORE INTO balances (user_id, balance)
+            VALUES (?, 0.0)
+        ''', (user_id,))
+        conn.commit()
 
 def get_all_user_ids():
-    """Fetches EVERY user ID stored in the database (Old and New)."""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT user_id FROM users")
-    rows = cursor.fetchall()
-    conn.close()
-    return [row[0] for row in rows]
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id FROM users")
+        rows = cursor.fetchall()
+        return [row[0] for row in rows]
 
 def get_user_ids_by_filter(filter_type="all"):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
     today_str = datetime.now().strftime("%m-%d-%Y")
-    
-    if filter_type == "today":
-        cursor.execute("SELECT user_id FROM users WHERE joined_at = ?", (today_str,))
-    else:
-        cursor.execute("SELECT user_id FROM users")
-        
-    rows = cursor.fetchall()
-    conn.close()
-    return [row[0] for row in rows]
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if filter_type == "today":
+            cursor.execute("SELECT user_id FROM users WHERE joined_at = ?", (today_str,))
+        else:
+            cursor.execute("SELECT user_id FROM users")
+        rows = cursor.fetchall()
+        return [row[0] for row in rows]
 
 def get_user_count():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM users")
-    count = cursor.fetchone()[0]
-    conn.close()
-    return count
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users")
+        return cursor.fetchone()[0]
 
-def is_user_exists(user_id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))
-    exists = cursor.fetchone() is not None
-    conn.close()
-    return exists
+def is_user_exists(user_id: int):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))
+        return cursor.fetchone() is not None
 
-def get_user_join_date(user_id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT joined_at FROM users WHERE user_id = ?", (user_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return row[0] if row and row[0] else datetime.now().strftime("%m-%d-%Y")
+def get_user_join_date(user_id: int):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT joined_at FROM users WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        return row[0] if row and row[0] else datetime.now().strftime("%m-%d-%Y")
 
-def get_user_balance(user_id):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT balance FROM balances WHERE user_id = ?", (user_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return row[0] if row else 0.0
+def get_user_balance(user_id: int) -> float:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT balance FROM balances WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if row is not None:
+            return float(row[0])
+        return 0.0
 
-def set_user_balance(user_id, amount):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO balances (user_id, balance) VALUES (?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET balance = ?
-    ''', (user_id, amount, amount))
-    conn.commit()
-    conn.close()
+def add_user_balance(user_id: int, amount: float) -> float:
+    """Safely adds amount to existing balance and returns new total."""
+    save_user(user_id)
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO balances (user_id, balance) VALUES (?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET balance = balance + ?
+        ''', (user_id, amount, amount))
+        conn.commit()
+    return get_user_balance(user_id)
+
+def set_user_balance(user_id: int, amount: float) -> float:
+    """Sets exact user balance and returns new total."""
+    save_user(user_id)
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO balances (user_id, balance) VALUES (?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET balance = ?
+        ''', (user_id, amount, amount))
+        conn.commit()
+    return get_user_balance(user_id)
 
 init_db()
 
@@ -704,7 +721,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "adm_bc":
         if user.id == ADMIN_TELEGRAM_ID:
             BROADCAST_STATE.add(user.id)
-            context.user_data['broadcast_filter'] = 'all'  # Forces 'all' users (old and new)
+            context.user_data['broadcast_filter'] = 'all'
             await query.edit_message_text("📢 **Broadcast Mode (All Users - Old & New):** Please send the message you want to broadcast.", parse_mode="Markdown", reply_markup=admin_panel_keyboard())
 
     elif data == "adm_bc_today":
@@ -883,8 +900,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "wallet":
         user_id_val = query.from_user.id
+        save_user(user_id_val, query.from_user.username)
         join_date = get_user_join_date(user_id_val)
         current_bal = get_user_balance(user_id_val)
+        
         await send_log_to_group(context.bot, f"{user_identifier} opened the wallet")
         text = (
             "==================================\n"
@@ -971,25 +990,26 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount = float(args[1])
         crypto = args[2].upper()
     except ValueError:
-        await update.message.reply_text("❌ Invalid format. Use numbers for user_id and amount.")
+        await update.message.reply_text("❌ Invalid format. Use numeric values for user_id and amount.")
         return
 
-    if not is_user_exists(target_user_id):
-        save_user(target_user_id)
+    try:
+        new_balance = add_user_balance(target_user_id, amount)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Failed to update balance in database: {e}")
+        return
 
-    current_bal = get_user_balance(target_user_id) + amount
-    set_user_balance(target_user_id, current_bal)
-
-    success_msg = (
-        "✅ Payment confirmed. Your account has been funded.\n\n"
-        f"Amount Added: £{amount:.2f}\n\n"
-        f"Your Balance: £{current_bal:.2f}"
+    success_user_msg = (
+        "✅ WALLET TOP-UP SUCCESSFUL\n\n"
+        f"💰 Amount Added: £{amount:.2f}\n"
+        f"💳 New Balance: £{new_balance:.2f}\n\n"
+        "Your wallet has been credited successfully."
     )
 
     attached_file = update.message.document or update.message.photo or update.message.audio or update.message.video
 
     try:
-        await context.bot.send_message(chat_id=target_user_id, text=success_msg)
+        await context.bot.send_message(chat_id=target_user_id, text=success_user_msg)
         if attached_file:
             if update.message.document:
                 file_id = update.message.document.file_id
@@ -997,9 +1017,16 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif update.message.photo:
                 file_id = update.message.photo[-1].file_id
                 await context.bot.send_photo(chat_id=target_user_id, photo=file_id)
-        await update.message.reply_text(f"✅ Successfully confirmed payment and credited user {target_user_id} with £{amount:.2f}")
+        await update.message.reply_text(
+            f"✅ Top-up successful!\n\n"
+            f"User ID: {target_user_id}\n"
+            f"Amount Added: £{amount:.2f}\n"
+            f"New Total Balance: £{new_balance:.2f}"
+        )
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Credited user balance, but failed to send message/file to user: {e}")
+        await update.message.reply_text(
+            f"⚠️ Balance updated to £{new_balance:.2f} in DB, but failed to send notification message to user: {e}"
+        )
 
 async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -1029,31 +1056,38 @@ async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Amount cannot be negative.")
         return
 
-    set_user_balance(target_user_id, amount)
-    if not is_user_exists(target_user_id):
-        save_user(target_user_id)
+    try:
+        new_balance = set_user_balance(target_user_id, amount)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Database error: {e}")
+        return
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     audit_log_text = (
-        f"📋 **Audit Log: Balance Update**\n"
+        f"📋 **Audit Log: Balance Set**\n"
         f"• Admin ID: {user.id}\n"
         f"• Target User ID: {target_user_id}\n"
-        f"• New Balance Set: £{amount:.2f}\n"
+        f"• New Balance Set: £{new_balance:.2f}\n"
         f"• Timestamp: {timestamp}"
     )
     await send_log_to_group(context.bot, audit_log_text)
 
-    user_msg = f"✅ Balance update: £{amount:g} has been added to your balance."
+    user_msg = (
+        "✅ WALLET TOP-UP SUCCESSFUL\n\n"
+        f"💰 Balance Updated: £{amount:.2f}\n"
+        f"💳 New Balance: £{new_balance:.2f}\n\n"
+        "Your wallet has been credited successfully."
+    )
     try:
         await context.bot.send_message(chat_id=target_user_id, text=user_msg)
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Balance updated successfully, but failed to notify user: {e}")
+        await update.message.reply_text(f"⚠️ Balance updated successfully in DB to £{new_balance:.2f}, but failed to notify user: {e}")
         return
 
     admin_confirmation = (
         "✅ Balance updated successfully\n\n"
         f"User ID: {target_user_id}\n"
-        f"Amount: £{amount:g}"
+        f"New Balance: £{new_balance:.2f}"
     )
     await update.message.reply_text(admin_confirmation)
 
