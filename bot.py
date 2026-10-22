@@ -74,7 +74,6 @@ COMMAND_PASSWORD = "myprince"
 COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
 
 # --- PERSISTENT DATABASE SETUP & HELPERS ---
-# Detects Railway persistent volume folder /app/data if available
 if os.path.exists('/app/data'):
     DB_NAME = '/app/data/bot_users.db'
 else:
@@ -165,7 +164,6 @@ def get_user_balance(user_id: int) -> float:
         return 0.0
 
 def add_user_balance(user_id: int, amount: float) -> float:
-    """Safely adds amount to existing balance and returns new total."""
     save_user(user_id)
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -177,7 +175,6 @@ def add_user_balance(user_id: int, amount: float) -> float:
     return get_user_balance(user_id)
 
 def set_user_balance(user_id: int, amount: float) -> float:
-    """Sets exact user balance and returns new total."""
     save_user(user_id)
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1232,3 +1229,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
