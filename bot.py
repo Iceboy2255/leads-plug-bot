@@ -70,10 +70,10 @@ ADMIN_TELEGRAM_ID = 7280810198
 ADMIN_GROUP_ID = -1004496804223  # Console / Group Chat ID
 COMMAND_PASSWORD = "myprince"
 
-# Secure hash for the admin command password (SHA-256 of "myprince")
 COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
 
-# --- PERSISTENT DATABASE SETUP & HELPERS ---
+# --- PERSISTENT DUAL-DATABASE SYNC SYSTEM ---
+# Uses /app/data if available on Railway, otherwise falls back locally
 if os.path.exists('/app/data'):
     DB_NAME = '/app/data/bot_users.db'
 else:
@@ -899,6 +899,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id_val = query.from_user.id
         save_user(user_id_val, query.from_user.username)
         join_date = get_user_join_date(user_id_val)
+        
+        # Directly re-fetch latest stored balance live from SQLite
         current_bal = get_user_balance(user_id_val)
         
         await send_log_to_group(context.bot, f"{user_identifier} opened the wallet")
