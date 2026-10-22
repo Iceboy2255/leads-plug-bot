@@ -73,7 +73,6 @@ COMMAND_PASSWORD = "myprince"
 COMMAND_PASSWORD_HASH = hashlib.sha256(COMMAND_PASSWORD.encode()).hexdigest()
 
 # --- PERSISTENT DUAL-DATABASE SYNC SYSTEM ---
-# Uses /app/data if available on Railway, otherwise falls back locally
 if os.path.exists('/app/data'):
     DB_NAME = '/app/data/bot_users.db'
 else:
@@ -900,7 +899,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_user(user_id_val, query.from_user.username)
         join_date = get_user_join_date(user_id_val)
         
-        # Directly re-fetch latest stored balance live from SQLite
+        # Live fetch stored balance from database
         current_bal = get_user_balance(user_id_val)
         
         await send_log_to_group(context.bot, f"{user_identifier} opened the wallet")
@@ -911,9 +910,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🗓 Join Date: {join_date}\n"
             "==================================\n\n"
             "Select a top-up amount below:\n"
-            "<i>Minimum top-up: £50</i>"
+            "Minimum top-up: £50"
         )
-        await query.message.edit_text(text, reply_markup=topup_keyboard("main_menu"), parse_mode="HTML")
+        await query.message.edit_text(text, reply_markup=topup_keyboard("main_menu"))
 
     elif data.startswith("topup_"):
         amount = data.split("_")[1]
@@ -998,24 +997,11 @@ async def confirm_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Failed to update balance in database: {e}")
         return
 
-    success_user_msg = (
-        "✅ WALLET TOP-UP SUCCESSFUL\n\n"
-        f"💰 Amount Added: £{amount:.2f}\n"
-        f"💳 New Balance: £{new_balance:.2f}\n\n"
-        "Your wallet has been credited successfully."
-    )
-
-    attached_file = update.message.document or update.message.photo or update.message.audio or update.message.video
+    # Single notification message to user
+    single_user_msg = f"✅ Balance update: £{amount:g} has been added to your balance."
 
     try:
-        await context.bot.send_message(chat_id=target_user_id, text=success_user_msg)
-        if attached_file:
-            if update.message.document:
-                file_id = update.message.document.file_id
-                await context.bot.send_document(chat_id=target_user_id, document=file_id)
-            elif update.message.photo:
-                file_id = update.message.photo[-1].file_id
-                await context.bot.send_photo(chat_id=target_user_id, photo=file_id)
+        await context.bot.send_message(chat_id=target_user_id, text=single_user_msg)
         await update.message.reply_text(
             f"✅ Top-up successful!\n\n"
             f"User ID: {target_user_id}\n"
@@ -1071,14 +1057,10 @@ async def userbal_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await send_log_to_group(context.bot, audit_log_text)
 
-    user_msg = (
-        "✅ WALLET TOP-UP SUCCESSFUL\n\n"
-        f"💰 Balance Updated: £{amount:.2f}\n"
-        f"💳 New Balance: £{new_balance:.2f}\n\n"
-        "Your wallet has been credited successfully."
-    )
+    # Single notification message to user
+    single_user_msg = f"✅ Balance update: £{amount:g} has been added to your balance."
     try:
-        await context.bot.send_message(chat_id=target_user_id, text=user_msg)
+        await context.bot.send_message(chat_id=target_user_id, text=single_user_msg)
     except Exception as e:
         await update.message.reply_text(f"⚠️ Balance updated successfully in DB to £{new_balance:.2f}, but failed to notify user: {e}")
         return
